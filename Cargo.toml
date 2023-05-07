@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 adw = { version = "0.4.1", package = "libadwaita", features = ["v1_3"] }
 gtk = { version = "0.6.6", package = "gtk4", features = ["v4_10"] }
+
+[build-dependencies]
+glib-build-tools = "0.17.0"

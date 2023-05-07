@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="AthnBrowserAppWindow" parent="AdwApplicationWindow">
+        <property name="title">ATHN browser</property>
+        <property name="default_width">350</property>
+        <child>
+            <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                    <object class="AdwHeaderBar"/>
+                </child>
+                <child>
+                    <object class="GtkListBox">
+                        <property name="margin_top">32</property>
+                        <property name="margin_bottom">32</property>
+                        <property name="margin_start">32</property>
+                        <property name="margin_end">32</property>
+                        <property name="selection_mode">GTK_SELECTION_NONE</property>
+                        <style>
+                            <class name="boxed-list"/>
+                        </style>
+                        <child>
+                            <object class="AdwActionRow">
+                                <signal name="activated" handler="handle_helloworldrow_activated"/>
+                                <property name="title">Press me!</property>
+                                <property name="activatable">true</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>

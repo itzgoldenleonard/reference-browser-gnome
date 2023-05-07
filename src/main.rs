@@ -1,49 +1,24 @@
-use adw::prelude::*;
+mod window;
 
-use adw::{ActionRow, Application, ApplicationWindow, HeaderBar};
-use gtk::{Box, ListBox, Orientation, SelectionMode};
+use adw::prelude::*;
+use adw::Application;
+use gtk::gio;
+use window::Window;
+
+const APP_ID: &str = "org.athn.browser.gnome";
 
 fn main() {
-    let application = Application::builder()
-        .application_id("com.example.FirstAdwaitaApp")
-        .build();
+    // Register and include ui
+    gio::resources_register_include!("browser.gresource").expect("Failed to register resources.");
 
-    application.connect_activate(|app| {
-        // ActionRows are only available in Adwaita
-        let row = ActionRow::builder()
-            .activatable(true)
-            .title("Click me")
-            .build();
-        row.connect_activated(|_| {
-            eprintln!("Clicked!");
-        });
+    let application = Application::builder().application_id(APP_ID).build();
 
-        let list = ListBox::builder()
-            .margin_top(32)
-            .margin_end(32)
-            .margin_bottom(32)
-            .margin_start(32)
-            .selection_mode(SelectionMode::None)
-            // makes the list look nicer
-            .css_classes(vec![String::from("boxed-list")])
-            .build();
-        list.append(&row);
-
-        // Combine the content in a box
-        let content = Box::new(Orientation::Vertical, 0);
-        // Adwaitas' ApplicationWindow does not include a HeaderBar
-        content.append(&HeaderBar::new());
-        content.append(&list);
-
-        let window = ApplicationWindow::builder()
-            .application(app)
-            .title("First App")
-            .default_width(350)
-            // add content to window
-            .content(&content)
-            .build();
-        window.show();
-    });
+    application.connect_activate(build_ui);
 
     application.run();
+}
+
+fn build_ui(app: &Application) {
+    let window = Window::new(app);
+    window.present();
 }
