@@ -1,6 +1,6 @@
-use glib::subclass::InitializingObject;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use glib::subclass::InitializingObject;
 use gtk::{glib, CompositeTemplate};
 
 // Object holding the state
@@ -36,10 +36,15 @@ impl Window {
         println!("Hello world!");
         row.set_subtitle("Hello world!");
     }
+
+    #[template_callback]
+    fn on_search_entry_activate(search_entry: &gtk::SearchEntry) {
+        println!("Searched: {}", search_entry.text());
+    }
 }
 
 // Trait shared by all GObjects
-impl ObjectImpl for Window { }
+impl ObjectImpl for Window {}
 
 // Trait shared by all widgets
 impl WidgetImpl for Window {}

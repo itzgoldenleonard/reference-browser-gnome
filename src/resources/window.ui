@@ -7,7 +7,24 @@
             <object class="GtkBox">
                 <property name="orientation">vertical</property>
                 <child>
-                    <object class="AdwHeaderBar"/>
+                    <object class="AdwHeaderBar">
+                        <child type="title">
+                            <object class="AdwClamp">
+                                <property name="hexpand">True</property>
+                                <child>
+                                    <object class="GtkSearchEntry" id="search_entry">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="halign">center</property>
+                                        <property name="valign">center</property>
+                                        <property name="hexpand">True</property>
+                                        <property name="placeholder-text">Enter URL</property>
+                                        <signal name="activate" handler="on_search_entry_activate"/>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+                    </object>
                 </child>
                 <child>
                     <object class="GtkListBox">
