@@ -40,6 +40,19 @@ impl Window {
     #[template_callback]
     fn on_search_entry_activate(search_entry: &gtk::SearchEntry) {
         println!("Searched: {}", search_entry.text());
+        let url = search_entry.text().to_string();
+
+        let client = reqwest::blocking::Client::builder()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .expect("Failed to build a client");
+
+        let response = client
+            .get(url)
+            .send()
+            .expect("Failed to make a request to the URL");
+
+        println!("{}", response.text().expect("Failed to decode response"));
     }
 }
 

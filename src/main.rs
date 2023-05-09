@@ -22,3 +22,12 @@ fn build_ui(app: &Application) {
     let window = Window::new(app);
     window.present();
 }
+
+/* Useful documentation
+ * gtk4_rs book: https://gtk-rs.org/gtk4-rs/git/book
+ * gtk4_rs documentation: https://gtk-rs.org/gtk4-rs/git/docs/gtk4/index.html
+ * libadwaita (rust) documentation: https://world.pages.gitlab.gnome.org/Rust/libadwaita-rs/stable/0.4/docs/libadwaita/index.html
+ * gtk4 documentation: https://docs.gtk.org/gtk4/index.html
+ * libadwaita documentation: https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.3/index.html
+ * Gnome HIG: https://developer.gnome.org/hig/index.html
+ */
