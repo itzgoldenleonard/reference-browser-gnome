@@ -1,4 +1,5 @@
 mod window;
+mod athn_document;
 
 use adw::prelude::*;
 use adw::Application;

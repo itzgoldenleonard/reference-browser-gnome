@@ -27,7 +27,7 @@
                     </object>
                 </child>
                 <child>
-                    <object class="GtkListBox">
+                    <object class="GtkListBox" id="canvas">
                         <property name="margin_top">32</property>
                         <property name="margin_bottom">32</property>
                         <property name="margin_start">32</property>
@@ -36,13 +36,6 @@
                         <style>
                             <class name="boxed-list"/>
                         </style>
-                        <child>
-                            <object class="AdwActionRow">
-                                <signal name="activated" handler="handle_helloworldrow_activated"/>
-                                <property name="title">Press me!</property>
-                                <property name="activatable">true</property>
-                            </object>
-                        </child>
                     </object>
                 </child>
             </object>

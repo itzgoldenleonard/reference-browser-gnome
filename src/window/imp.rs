@@ -1,3 +1,4 @@
+use crate::athn_document::AthnDocument;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
@@ -32,12 +33,6 @@ impl ObjectSubclass for Window {
 #[gtk::template_callbacks]
 impl Window {
     #[template_callback]
-    fn handle_helloworldrow_activated(row: &adw::ActionRow) {
-        println!("Hello world!");
-        row.set_subtitle("Hello world!");
-    }
-
-    #[template_callback]
     fn on_search_entry_activate(search_entry: &gtk::SearchEntry) {
         println!("Searched: {}", search_entry.text());
         let url = search_entry.text().to_string();
@@ -52,7 +47,11 @@ impl Window {
             .send()
             .expect("Failed to make a request to the URL");
 
-        println!("{}", response.text().expect("Failed to decode response"));
+        for line in response.text().unwrap().lines() {
+            if line.starts_with("TI ") {
+                AthnDocument::new(line.to_string());
+            }
+        }
     }
 }
 
