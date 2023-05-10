@@ -47,11 +47,10 @@ impl Window {
             .send()
             .expect("Failed to make a request to the URL");
 
-        for line in response.text().unwrap().lines() {
-            if line.starts_with("TI ") {
-                AthnDocument::new(line.to_string());
-            }
-        }
+        let document = AthnDocument::from_str(response.text().unwrap().as_str()).unwrap();
+        // Placeholder just to see that it works, it will be replaced with a call to the rendering
+        // function
+        println!("Title: {}", document.metadata.title);
     }
 }
 
@@ -68,3 +67,9 @@ impl ApplicationWindowImpl for Window {}
 
 // Trait shared by all adw application windows
 impl AdwApplicationWindowImpl for Window {}
+
+
+/*
+let label = Label::new(document.metadata.title.to_string());
+list_box.append(&label);
+*/

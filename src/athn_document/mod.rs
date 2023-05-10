@@ -8,15 +8,24 @@ impl AthnDocument {
             metadata: AthnMetadata::new(title),
         }
     }
+
+    pub fn from_str(input: &str) -> Result<AthnDocument, &str> {
+        for line in input.lines() {
+            if line.starts_with("TI ") {
+                return Ok(AthnDocument::new(line.to_string()));
+            }
+        } 
+        Err("No title found")
+    }
 }
 
 pub struct AthnMetadata {
-    title: String,
-    subtitle: Option<String>,
-    author: Option<Vec<String>>,
-    license: Option<Vec<String>>,
-    language: Option<Vec<String>>,
-    cache: Option<i32>,
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub author: Option<Vec<String>>,
+    pub license: Option<Vec<String>>,
+    pub language: Option<Vec<String>>,
+    pub cache: Option<i32>,
 }
 
 impl AthnMetadata {
