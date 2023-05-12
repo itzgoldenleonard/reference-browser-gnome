@@ -2,14 +2,14 @@ use crate::athn_document::AthnDocument;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
-use gtk::{glib, CompositeTemplate};
+use gtk::{glib, CompositeTemplate, ListBox};
 
 // Object holding the state
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/org/athn/browser/gnome/window.ui")]
 pub struct Window {
-    //#[template_child]
-    //pub button: TemplateChild<Button>,
+    #[template_child]
+    pub canvas: TemplateChild<ListBox>,
 }
 
 // The central trait for subclassing a GObject
@@ -33,24 +33,25 @@ impl ObjectSubclass for Window {
 #[gtk::template_callbacks]
 impl Window {
     #[template_callback]
-    fn on_search_entry_activate(search_entry: &gtk::SearchEntry) {
-        println!("Searched: {}", search_entry.text());
+    fn on_search_entry_activate(&self, search_entry: &gtk::SearchEntry) {
+        // Extract the query from the search entry and parse it into a URL
         let url = search_entry.text().to_string();
 
+        // Make a reqwest client that doesnt validate certificates
         let client = reqwest::blocking::Client::builder()
             .danger_accept_invalid_certs(true)
             .build()
             .expect("Failed to build a client");
 
+        // Make the actual request
         let response = client
             .get(url)
             .send()
             .expect("Failed to make a request to the URL");
 
+        // Extract and parse the athn document data from the Response and pass it to the render function
         let document = AthnDocument::from_str(response.text().unwrap().as_str()).unwrap();
-        // Placeholder just to see that it works, it will be replaced with a call to the rendering
-        // function
-        println!("Title: {}", document.metadata.title);
+        self.obj().render(document);
     }
 }
 
@@ -67,7 +68,6 @@ impl ApplicationWindowImpl for Window {}
 
 // Trait shared by all adw application windows
 impl AdwApplicationWindowImpl for Window {}
-
 
 /*
 let label = Label::new(document.metadata.title.to_string());

@@ -1,7 +1,9 @@
 mod imp;
 
+use crate::athn_document::AthnDocument;
+use adw::subclass::prelude::*;
 use glib::Object;
-use gtk::{gio, glib};
+use gtk::{gio, glib, Label};
 use adw::Application;
 
 glib::wrapper! {
@@ -15,5 +17,10 @@ impl Window {
     pub fn new(app: &Application) -> Self {
         // Create new window
         Object::builder().property("application", app).build()
+    }
+
+    pub fn render(&self, document: AthnDocument) {
+        let title = Label::new(Some(document.metadata.title.as_str()));
+        self.imp().canvas.append(&title);
     }
 }
