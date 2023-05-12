@@ -10,12 +10,19 @@ impl AthnDocument {
     }
 
     pub fn from_str(input: &str) -> Result<AthnDocument, &str> {
-        for line in input.lines() {
-            if line.starts_with("TI ") {
-                return Ok(AthnDocument::new(line.to_string()));
-            }
-        } 
-        Err("No title found")
+        let metadata_section = match input.find("--- Meta\n") {
+            None => return Err("No metadata section found"),
+            Some(start_index) => match input.find("---\n") {
+                None => return Err("Meta section found but not ended"),
+                Some(end_index) => input.get(start_index + 9..end_index).unwrap(),
+            },
+        };
+
+        let metadata_parsed = AthnMetadata::from_str(metadata_section).unwrap();
+
+        Ok(AthnDocument {
+            metadata: metadata_parsed,
+        })
     }
 }
 
@@ -38,5 +45,14 @@ impl AthnMetadata {
             language: None,
             cache: None,
         }
+    }
+
+    fn from_str(input: &str) -> Result<AthnMetadata, &str> {
+        let lines = input.lines();
+        let title = match lines.filter(|x| x.starts_with("TI ")).last() {
+            None => return Err("Required metadata tag 'Title' not found"),
+            Some(t) => t.split_at(3).1,
+        };
+        Ok(AthnMetadata::new(title.into()))
     }
 }
