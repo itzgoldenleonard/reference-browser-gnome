@@ -78,5 +78,14 @@ impl Window {
             }
             (None, None) => (),
         }
+
+        // Show subtitle if there is one
+        if document.metadata.subtitle.is_some() {
+            let subtitle = Label::builder()
+                .label(document.metadata.subtitle.unwrap_or("Default subtitle".to_string()))
+                .halign(gtk::Align::Start)
+                .build();
+            self.imp().canvas.append(&subtitle);
+        }
     }
 }
