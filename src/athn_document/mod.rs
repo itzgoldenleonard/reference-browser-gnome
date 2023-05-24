@@ -59,7 +59,7 @@ impl Document {
         // enum's from_str function
         let main_lines = main_section
             .lines()
-            .map(|line| MainLine::from_str(line).unwrap())
+            .map(|line| MainLine::from_str(line))
             .collect();
 
         Ok(Document {
@@ -113,8 +113,21 @@ impl Metadata {
 }
 
 impl MainLine {
-    fn from_str(input: &str) -> Result<MainLine, &str> {
-        Ok(MainLine::TextLine(input.to_string()))
+    fn from_str(input: &str) -> MainLine {
+        use MainLine::*;
+
+        match input.split_at(2) {
+            ("# ", val) => HeadingLine(HeadingLevel::One, val.to_string()),
+            ("##", val) => match val.find(" ") {
+                Some(0) => HeadingLine(HeadingLevel::Two, val.get(1..).unwrap().to_string()),
+                Some(1) => HeadingLine(HeadingLevel::Three, val.get(2..).unwrap().to_string()),
+                Some(2) => HeadingLine(HeadingLevel::Four, val.get(3..).unwrap().to_string()),
+                Some(3) => HeadingLine(HeadingLevel::Five, val.get(4..).unwrap().to_string()),
+                Some(4) => HeadingLine(HeadingLevel::Six, val.get(5..).unwrap().to_string()),
+                _ => TextLine(input.to_string()),
+            }
+            (_, _) => TextLine(input.to_string()),
+        }
     }
 }
 
@@ -146,7 +159,7 @@ mod tests {
 
             let result = MainLine::from_str(line);
 
-            assert_eq!(result.unwrap(), expected);
+            assert_eq!(result, expected);
         }
 
         #[test]
@@ -157,7 +170,29 @@ mod tests {
 
             let result = MainLine::from_str(line);
 
-            assert_eq!(result.unwrap(), expected);
+            assert_eq!(result, expected);
+        }
+
+        #[test]
+        fn find_heading6_line() {
+            let expected = MainLine::HeadingLine(HeadingLevel::Six, "Hello world!".to_string());
+
+            let line = "###### Hello world!";
+
+            let result = MainLine::from_str(line);
+
+            assert_eq!(result, expected);
+        }
+
+        #[test]
+        fn find_text_line_that_looks_like_a_heading() {
+            let expected = MainLine::TextLine("##########This is actually not a heading line".to_string());
+
+            let line = "##########This is actually not a heading line";
+
+            let result = MainLine::from_str(line);
+
+            assert_eq!(result, expected);
         }
     }
 
