@@ -116,6 +116,9 @@ impl MainLine {
     fn from_str(input: &str) -> MainLine {
         use MainLine::*;
 
+        if input.len() <= 2 {
+            return TextLine(input.to_string())
+        };
         match input.split_at(2) {
             ("# ", val) => HeadingLine(HeadingLevel::One, val.to_string()),
             ("##", val) => match val.find(" ") {

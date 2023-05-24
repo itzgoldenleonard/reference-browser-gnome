@@ -5,7 +5,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Application;
 use glib::Object;
-use gtk::{gio, glib, Label};
+use gtk::{gio, glib, Label, Separator};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
@@ -87,5 +87,41 @@ impl Window {
                 .build();
             self.imp().canvas.append(&subtitle);
         }
+
+        // Horizontal seperator between metadata and main sections
+        let metadata_separator = Separator::builder().build();
+        self.imp().canvas.append(&metadata_separator);
+
+        // Render main section
+        for line in document.main_lines {
+            use crate::athn_document::MainLine::*;
+            match line {
+                TextLine(content) => {
+                    let text_obj = Label::builder()
+                        .label(content)
+                        .halign(gtk::Align::Start)
+                        .build();
+
+                    self.imp().canvas.append(&text_obj);
+                },
+                HeadingLine(level, content) => {
+                    let heading_obj = Label::builder()
+                        .label(content)
+                        .halign(gtk::Align::Start)
+                        .build();
+                    use crate::athn_document::HeadingLevel::*;
+                    let heading_class = match level {
+                        One => "title-1",
+                        Two => "title-2",
+                        Three => "title-3",
+                        Four => "title-4",
+                        Five => "heading",
+                        Six => "caption-heading",
+                    };
+                    heading_obj.add_css_class(heading_class);
+                    self.imp().canvas.append(&heading_obj);
+                }
+            }
+        };
     }
 }
