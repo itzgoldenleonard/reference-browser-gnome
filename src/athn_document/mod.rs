@@ -1,33 +1,10 @@
-pub struct AthnDocument {
-    pub metadata: AthnMetadata,
-}
-
-impl AthnDocument {
-    pub fn new(title: String) -> AthnDocument {
-        AthnDocument {
-            metadata: AthnMetadata::new(title),
-        }
-    }
-
-    pub fn from_str(input: &str) -> Result<AthnDocument, &str> {
-        let metadata_section = match input.find("--- Meta\n") {
-            None => return Err("No metadata section found"),
-            Some(start_index) => match input.find("---\n") {
-                None => return Err("Meta section found but not ended"),
-                Some(end_index) => input.get(start_index + 9..end_index).unwrap(),
-            },
-        };
-
-        let metadata_parsed = AthnMetadata::from_str(metadata_section).unwrap();
-
-        Ok(AthnDocument {
-            metadata: metadata_parsed,
-        })
-    }
+pub struct Document {
+    pub metadata: Metadata,
+    pub main_lines: Vec<MainLine>,
 }
 
 #[derive(PartialEq, Debug)]
-pub struct AthnMetadata {
+pub struct Metadata {
     pub title: String,
     pub subtitle: Option<String>,
     pub author: Option<Vec<String>>,
@@ -36,10 +13,66 @@ pub struct AthnMetadata {
     pub cache: Option<u32>,
 }
 
-impl AthnMetadata {
-    fn new(title: String) -> AthnMetadata {
-        AthnMetadata {
-            title: title,
+#[derive(PartialEq, Debug)]
+// A single line in the main section
+pub enum MainLine {
+    TextLine(String),
+    HeadingLine(HeadingLevel, String),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum HeadingLevel {
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+}
+
+impl Document {
+    pub fn new(title: String) -> Document {
+        Document {
+            metadata: Metadata::new(title),
+            main_lines: vec![],
+        }
+    }
+
+    pub fn from_str(input: &str) -> Result<Document, &str> {
+        // Find the metadata section and store it in a variable
+        let metadata_section = match input.find("--- Meta\n") {
+            None => return Err("No metadata section found"),
+            Some(start_index) => match input.find("---\n") {
+                None => return Err("Meta section found but not ended"),
+                Some(end_index) => input.get(start_index + 9..end_index).unwrap(),
+            },
+        };
+        // Parse the metadata section
+        let metadata_parsed = Metadata::from_str(metadata_section)?;
+
+        // Find the main section and store it
+        let main_section = match input.find("---\n") {
+            None => return Err("No main section found"),
+            Some(i) => input.get(i + 4..).unwrap(),
+        };
+        // Iterate over each line of the main section and convert it to an AthnMainLine with the
+        // enum's from_str function
+        let main_lines = main_section
+            .lines()
+            .map(|line| MainLine::from_str(line).unwrap())
+            .collect();
+
+        Ok(Document {
+            metadata: metadata_parsed,
+            main_lines,
+        })
+    }
+}
+
+impl Metadata {
+    fn new(title: String) -> Metadata {
+        Metadata {
+            title,
             subtitle: None,
             author: None,
             license: None,
@@ -48,8 +81,8 @@ impl AthnMetadata {
         }
     }
 
-    fn from_str(input: &str) -> Result<AthnMetadata, &str> {
-        let mut metadata = AthnMetadata::new("Default title".to_string());
+    fn from_str(input: &str) -> Result<Metadata, &str> {
+        let mut metadata = Metadata::new("Default title".to_string());
 
         for line in input.lines() {
             match line.split_at(3) {
@@ -70,7 +103,7 @@ impl AthnMetadata {
                 ("CH ", val) => match val.parse() {
                     Err(_) => return Err("Invalid value for cache duration metadata tag"),
                     Ok(val) => metadata.cache = Some(val),
-                }
+                },
                 (_, val) => println!("Hit catchall with value: {}", val),
             }
         }
@@ -79,8 +112,55 @@ impl AthnMetadata {
     }
 }
 
+impl MainLine {
+    fn from_str(input: &str) -> Result<MainLine, &str> {
+        Ok(MainLine::TextLine(input.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    mod document_from_str_tests {
+        use super::super::*;
+
+        #[test]
+        fn find_single_text_line() {
+            let expected = vec![MainLine::TextLine("Hello world!".to_string())];
+
+            let input = "--- Meta\nTI Test\n---\nHello world!\n";
+
+            let result = Document::from_str(input);
+
+            assert_eq!(result.unwrap().main_lines, expected);
+        }
+    }
+
+    mod main_line_from_str_tests {
+        use super::super::*;
+
+        #[test]
+        fn find_basic_text_line() {
+            let expected = MainLine::TextLine("Hello world!".to_string());
+
+            let line = "Hello world!";
+
+            let result = MainLine::from_str(line);
+
+            assert_eq!(result.unwrap(), expected);
+        }
+
+        #[test]
+        fn find_heading_line() {
+            let expected = MainLine::HeadingLine(HeadingLevel::One, "Hello world!".to_string());
+
+            let line = "# Hello world!";
+
+            let result = MainLine::from_str(line);
+
+            assert_eq!(result.unwrap(), expected);
+        }
+    }
+
     mod metadata_from_str_tests {
         use super::super::*;
 
@@ -90,7 +170,7 @@ mod tests {
 
             let meta_section = "TI Test\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().title, expected);
         }
@@ -101,7 +181,7 @@ mod tests {
 
             let meta_section = "TI Test\nST This is a subtitle";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().subtitle, expected);
         }
@@ -112,7 +192,7 @@ mod tests {
 
             let meta_section = "TI Test\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().author, expected);
         }
@@ -123,7 +203,7 @@ mod tests {
 
             let meta_section = "TI Test\nAU Some author\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().author, expected);
         }
@@ -138,7 +218,7 @@ mod tests {
 
             let meta_section = "TI Test\nAU Some author\nAU Another author\nAU 3rd author\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().author, expected);
         }
@@ -149,7 +229,7 @@ mod tests {
 
             let meta_section = "TI Test\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().license, expected);
         }
@@ -160,7 +240,7 @@ mod tests {
 
             let meta_section = "TI Test\nAU Some author\nLI GPL-3.0-or-later";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().license, expected);
         }
@@ -174,7 +254,7 @@ mod tests {
 
             let meta_section = "TI Test\nLI GPL-3.0-or-later\nLI CC-BY-SA-4.0\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().license, expected);
         }
@@ -185,7 +265,7 @@ mod tests {
 
             let meta_section = "TI Test\nLA en\nLA de\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().language, expected);
         }
@@ -196,7 +276,7 @@ mod tests {
 
             let meta_section = "TI Test\n";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().cache, expected);
         }
@@ -207,7 +287,7 @@ mod tests {
 
             let meta_section = "TI Test\nAU Some author\nLI GPL-3.0-or-later\nCH 100";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert_eq!(result.unwrap().cache, expected);
         }
@@ -216,7 +296,7 @@ mod tests {
         fn find_invalid_cache_duration() {
             let meta_section = "TI Test\nAU Some author\nLI GPL-3.0-or-later\nCH 1o0";
 
-            let result = AthnMetadata::from_str(meta_section);
+            let result = Metadata::from_str(meta_section);
 
             assert!(result.is_err());
         }

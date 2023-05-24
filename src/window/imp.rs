@@ -1,4 +1,4 @@
-use crate::athn_document::AthnDocument;
+use crate::athn_document::Document;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
@@ -50,7 +50,7 @@ impl Window {
             .expect("Failed to make a request to the URL");
 
         // Extract and parse the athn document data from the Response and pass it to the render function
-        let document = AthnDocument::from_str(response.text().unwrap().as_str()).unwrap();
+        let document = Document::from_str(response.text().unwrap().as_str()).unwrap();
         self.obj().render(document);
     }
 }

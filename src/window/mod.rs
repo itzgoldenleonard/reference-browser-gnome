@@ -1,6 +1,6 @@
 mod imp;
 
-use crate::athn_document::AthnDocument;
+use crate::athn_document::Document;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Application;
@@ -20,7 +20,7 @@ impl Window {
         Object::builder().property("application", app).build()
     }
 
-    pub fn render(&self, document: AthnDocument) {
+    pub fn render(&self, document: Document) {
         // Show title metadata attribute
         let title = Label::builder()
             .label(document.metadata.title.as_str())
