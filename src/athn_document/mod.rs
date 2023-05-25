@@ -1,6 +1,11 @@
+use reqwest::Url;
+
+#[derive(PartialEq, Debug)]
 pub struct Document {
     pub metadata: Metadata,
-    pub main_lines: Vec<MainLine>,
+    pub main: Vec<MainLine>,
+    pub header: Vec<HeaderLine>,
+    pub footer: Vec<FooterLine>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -13,15 +18,49 @@ pub struct Metadata {
     pub cache: Option<u32>,
 }
 
+impl Metadata {
+    pub fn builder() -> MetadataBuilder {
+        MetadataBuilder::default()
+    }
+}
+
+#[derive(Default)]
+pub struct MetadataBuilder {
+    title: String,
+    subtitle: Option<String>,
+    author: Option<Vec<String>>,
+    license: Option<Vec<String>>,
+    language: Option<Vec<String>>,
+    cache: Option<u32>,
+}
+
 #[derive(PartialEq, Debug)]
 // A single line in the main section
 pub enum MainLine {
     TextLine(String),
-    HeadingLine(HeadingLevel, String),
+    LinkLine(Url, String),
+    PreformattedLine(bool, String),
+    SeparatorLine,
+    UListLine(Level, String),
+    OListLine(Level, String, String),
+    DropdownLine(String, String),
+    HeadingLine(Level, String),
+    QuoteLine(String),
 }
 
 #[derive(PartialEq, Debug)]
-pub enum HeadingLevel {
+pub enum HeaderLine {
+    LinkLine(Url, String),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum FooterLine {
+    LinkLine(Url, String),
+    TextLine(String),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Level {
     One,
     Two,
     Three,
@@ -30,6 +69,58 @@ pub enum HeadingLevel {
     Six,
 }
 
+impl MetadataBuilder {
+    pub fn new() -> MetadataBuilder {
+        // Set the minimally required fields
+        MetadataBuilder {
+            title: String::new(),
+            subtitle: None,
+            author: None,
+            license: None,
+            language: None,
+            cache: None,
+        }
+    }
+
+    pub fn build(self) -> Metadata {
+        Metadata {
+            title: self.title,
+            subtitle: self.subtitle,
+            author: self.author,
+            license: self.license,
+            language: self.language,
+            cache: self.cache,
+        }
+    }
+}
+
+impl Document {
+    // Non functional temporary function, it wont compile without it
+    pub fn from_str(_input: &str) -> Result<Document, &str> {
+        Ok(Document {
+            metadata: Metadata::builder().build(),
+            main: vec![],
+            header: vec![],
+            footer: vec![],
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn metadatabuilder_test() {
+        let expected_title = String::new();
+
+        let metadata_obj = Metadata::builder().build();
+
+        assert_eq!(expected_title, metadata_obj.title);
+    }
+}
+
+/*
 impl Document {
     pub fn new(title: String) -> Document {
         Document {
@@ -340,3 +431,4 @@ mod tests {
         }
     }
 }
+*/

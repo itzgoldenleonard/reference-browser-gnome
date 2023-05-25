@@ -93,7 +93,7 @@ impl Window {
         self.imp().canvas.append(&metadata_separator);
 
         // Render main section
-        for line in document.main_lines {
+        for line in document.main {
             use crate::athn_document::MainLine::*;
             match line {
                 TextLine(content) => {
@@ -109,7 +109,7 @@ impl Window {
                         .label(content)
                         .halign(gtk::Align::Start)
                         .build();
-                    use crate::athn_document::HeadingLevel::*;
+                    use crate::athn_document::Level::*;
                     let heading_class = match level {
                         One => "title-1",
                         Two => "title-2",
@@ -120,7 +120,8 @@ impl Window {
                     };
                     heading_obj.add_css_class(heading_class);
                     self.imp().canvas.append(&heading_obj);
-                }
+                },
+                _ => (),
             }
         };
     }
