@@ -83,6 +83,14 @@ pub enum Level {
     Six,
 }
 
+pub enum Section {
+    Meta,
+    Main,
+    Form,
+    Header,
+    Footer,
+}
+
 impl MetadataBuilder {
     pub fn new() -> MetadataBuilder {
         MetadataBuilder::default()
@@ -178,6 +186,118 @@ impl DocumentBuilder {
     }
 }
 
+pub fn parse(
+    mut line: std::str::Lines,
+    mut builder: DocumentBuilder,
+    current_section: Section,
+) -> Result<DocumentBuilder, &str> {
+    match line.next() {
+        // Reached the end of the document, we're done
+        None => Ok(builder),
+        Some(current_line) => {
+            // Ignore empty lines
+            if current_line.is_empty() {
+                return parse(line, builder, current_section);
+            };
+
+            // Change the section if a section line is encountered
+            if current_line.get(0..3).unwrap_or_default() == "+++" {
+                use Section::*;
+                match current_line {
+                    "+++ Meta" => return parse(line, builder, Meta),
+                    "+++ Header" => return parse(line, builder, Header),
+                    "+++ Footer" => return parse(line, builder, Footer),
+                    "+++ Form" => return parse(line, builder, Form),
+                    _ => return parse(line, builder, Main),
+                }
+            }
+
+            // Differentiate behavior based on the section
+            match current_section {
+                Section::Meta => {
+                    // split_at will panic if the line is shorter than 3 bytes, it's not valid
+                    // anyways if it is, so we can just Err if that happens
+                    if current_line.len() <= 3 {
+                        return Err("Invalid Metadata tag line encountered (too short)");
+                    };
+                    // Match on the different valid metadata tags and Err if a line is invalid
+                    match current_line.split_at(3) {
+                        ("TI ", val) => {
+                            return {
+                                builder.metadata = builder.metadata.title(val.to_string());
+                                parse(line, builder, current_section)
+                            }
+                        }
+                        ("ST ", val) => {
+                            return {
+                                builder.metadata = builder.metadata.subtitle(val.to_string());
+                                parse(line, builder, current_section)
+                            }
+                        }
+                        ("AU ", val) => {
+                            return {
+                                builder.metadata =
+                                    builder.metadata.add_author_unfailing(val.to_string());
+                                parse(line, builder, current_section)
+                            }
+                        }
+                        ("LI ", val) => {
+                            return {
+                                builder.metadata =
+                                    builder.metadata.add_license_unfailing(val.to_string());
+                                parse(line, builder, current_section)
+                            }
+                        }
+                        ("LA ", val) => {
+                            return {
+                                builder.metadata =
+                                    builder.metadata.add_language_unfailing(val.to_string());
+                                parse(line, builder, current_section)
+                            }
+                        }
+                        ("CH ", val) => match val.parse() {
+                            Err(_) => return Err("Invalid cache duration metadata tag content"),
+                            Ok(parsed) => {
+                                return {
+                                    builder.metadata = builder.metadata.cache(parsed);
+                                    parse(line, builder, current_section)
+                                }
+                            }
+                        },
+                        (_, _) => return Err("Invalid Metadata tag line encountered"),
+                    }
+                }
+
+                Section::Main | Section::Form => {
+                    // split_at will panic if the line is shorter than 3 bytes, if it is we know
+                    // that the line is a text line
+                    if current_line.len() <= 3 {
+                        return parse(
+                            line,
+                            builder.add_main_line(MainLine::TextLine(current_line.to_string())),
+                            current_section,
+                        );
+                    };
+                    // Match on all the different possible LTIs, if it doesnt match it's a text line
+                    match current_line.split_at(3) {
+                        ("---", _) => parse(line, builder.add_main_line(MainLine::SeparatorLine), current_section),
+                        (_, _) => parse(
+                            line,
+                            builder.add_main_line(MainLine::TextLine(current_line.to_string())),
+                            current_section,
+                        ),
+                    }
+                }
+                _ => parse(
+                    line,
+                    builder.add_main_line(MainLine::TextLine(current_line.to_string())),
+                    current_section,
+                ),
+            }
+        }
+    }
+}
+
 impl Document {
     // Non functional temporary function, it wont compile without it
     pub fn from_str(_input: &str) -> Result<Document, &str> {
@@ -192,6 +312,21 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
+    mod parse_tests {
+        use super::super::*;
+
+        #[test]
+        fn basic_example() {
+            let expected = Document::builder().build();
+
+            let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++\n\n()\nLittle text line makes the test fail\n---\n";
+
+            let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
+
+            assert_eq!(document.build(), expected);
+        }
+    }
+
     mod metadatabuilder_tests {
         use super::super::*;
 
