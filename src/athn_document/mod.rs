@@ -4,8 +4,22 @@ use reqwest::Url;
 pub struct Document {
     pub metadata: Metadata,
     pub main: Vec<MainLine>,
-    pub header: Vec<HeaderLine>,
-    pub footer: Vec<FooterLine>,
+    pub header: Option<Vec<HeaderLine>>,
+    pub footer: Option<Vec<FooterLine>>,
+}
+
+impl Document {
+    pub fn builder() -> DocumentBuilder {
+        DocumentBuilder::default()
+    }
+}
+
+#[derive(Default)]
+pub struct DocumentBuilder {
+    pub metadata: MetadataBuilder,
+    main: Vec<MainLine>,
+    header: Option<Vec<HeaderLine>>,
+    footer: Option<Vec<FooterLine>>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -38,7 +52,7 @@ pub struct MetadataBuilder {
 // A single line in the main section
 pub enum MainLine {
     TextLine(String),
-    LinkLine(Url, String),
+    LinkLine(Url, Option<String>),
     PreformattedLine(bool, String),
     SeparatorLine,
     UListLine(Level, String),
@@ -50,12 +64,12 @@ pub enum MainLine {
 
 #[derive(PartialEq, Debug)]
 pub enum HeaderLine {
-    LinkLine(Url, String),
+    LinkLine(Url, Option<String>),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum FooterLine {
-    LinkLine(Url, String),
+    LinkLine(Url, Option<String>),
     TextLine(String),
 }
 
@@ -128,14 +142,50 @@ impl MetadataBuilder {
     }
 }
 
+impl DocumentBuilder {
+    pub fn new() -> DocumentBuilder {
+        DocumentBuilder::default()
+    }
+
+    pub fn add_main_line(mut self, line: MainLine) -> DocumentBuilder {
+        self.main.push(line);
+        self
+    }
+
+    pub fn add_header_line(mut self, line: HeaderLine) -> DocumentBuilder {
+        match self.header.as_mut() {
+            None => self.header = Some(vec![line]),
+            Some(v) => v.push(line),
+        }
+        self
+    }
+
+    pub fn add_footer_line(mut self, line: FooterLine) -> DocumentBuilder {
+        match self.footer.as_mut() {
+            None => self.footer = Some(vec![line]),
+            Some(v) => v.push(line),
+        }
+        self
+    }
+
+    pub fn build(self) -> Document {
+        Document {
+            metadata: self.metadata.build(),
+            main: self.main,
+            header: self.header,
+            footer: self.footer,
+        }
+    }
+}
+
 impl Document {
     // Non functional temporary function, it wont compile without it
     pub fn from_str(_input: &str) -> Result<Document, &str> {
         Ok(Document {
             metadata: Metadata::builder().build(),
             main: vec![],
-            header: vec![],
-            footer: vec![],
+            header: None,
+            footer: None,
         })
     }
 }
@@ -201,7 +251,24 @@ mod tests {
 
         #[test]
         fn set_too_many_authors() {
-            let expected = Some(vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string(), "5".to_string(), "6".to_string(), "7".to_string(), "8".to_string(), "9".to_string(), "10".to_string(), "11".to_string(), "12".to_string(), "13".to_string(), "14".to_string(), "15".to_string(), "16".to_string()]);
+            let expected = Some(vec![
+                "1".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                "4".to_string(),
+                "5".to_string(),
+                "6".to_string(),
+                "7".to_string(),
+                "8".to_string(),
+                "9".to_string(),
+                "10".to_string(),
+                "11".to_string(),
+                "12".to_string(),
+                "13".to_string(),
+                "14".to_string(),
+                "15".to_string(),
+                "16".to_string(),
+            ]);
 
             let metadata_obj = Metadata::builder()
                 .add_author_unfailing("1".to_string())
@@ -252,7 +319,12 @@ mod tests {
 
         #[test]
         fn set_too_many_licenses() {
-            let expected = Some(vec!["CC0-1.0".to_string(), "CC0-1.0".to_string(), "CC0-1.0".to_string(), "CC0-1.0".to_string()]);
+            let expected = Some(vec![
+                "CC0-1.0".to_string(),
+                "CC0-1.0".to_string(),
+                "CC0-1.0".to_string(),
+                "CC0-1.0".to_string(),
+            ]);
 
             let metadata_obj = Metadata::builder()
                 .add_license_unfailing("CC0-1.0".to_string())
@@ -293,11 +365,147 @@ mod tests {
         fn set_cache() {
             let expected = Some(100);
 
-            let metadata_obj = Metadata::builder()
-                .cache(100)
-                .build();
+            let metadata_obj = Metadata::builder().cache(100).build();
 
             assert_eq!(metadata_obj.cache, expected);
+        }
+    }
+
+    mod documentbuilder_tests {
+        use super::super::*;
+
+        #[test]
+        fn build_test() {
+            let expected_obj = Document {
+                metadata: Metadata::builder().build(),
+                main: vec![],
+                header: None,
+                footer: None,
+            };
+
+            let document_obj = Document::builder().build();
+
+            assert_eq!(document_obj, expected_obj);
+        }
+
+        #[test]
+        fn single_main_line() {
+            use MainLine::*;
+
+            let expected = vec![SeparatorLine];
+
+            let document_obj = Document::builder().add_main_line(SeparatorLine).build();
+
+            assert_eq!(document_obj.main, expected);
+        }
+
+        #[test]
+        fn multiple_main_lines() {
+            use MainLine::*;
+
+            let expected = vec![
+                SeparatorLine,
+                HeadingLine(Level::One, "Line 2".to_string()),
+                TextLine("Line 3".to_string()),
+            ];
+
+            let document_obj = Document::builder()
+                .add_main_line(SeparatorLine)
+                .add_main_line(HeadingLine(Level::One, "Line 2".to_string()))
+                .add_main_line(TextLine("Line 3".to_string()))
+                .build();
+
+            assert_eq!(document_obj.main, expected);
+        }
+
+        #[test]
+        fn single_header_line() {
+            use HeaderLine::*;
+
+            let expected = Some(vec![LinkLine(
+                Url::parse("https://localhost:3000/").unwrap(),
+                None,
+            )]);
+
+            let document_obj = Document::builder()
+                .add_header_line(LinkLine(
+                    Url::parse("https://localhost:3000/").unwrap(),
+                    None,
+                ))
+                .build();
+
+            assert_eq!(document_obj.header, expected);
+        }
+
+        #[test]
+        fn multiple_header_lines() {
+            use HeaderLine::*;
+
+            let expected = Some(vec![
+                LinkLine(Url::parse("https://localhost:3000/").unwrap(), None),
+                LinkLine(
+                    Url::parse("https://localhost:3000/index.athn").unwrap(),
+                    Some("index".to_string()),
+                ),
+            ]);
+
+            let document_obj = Document::builder()
+                .add_header_line(LinkLine(
+                    Url::parse("https://localhost:3000/").unwrap(),
+                    None,
+                ))
+                .add_header_line(LinkLine(
+                    Url::parse("https://localhost:3000/index.athn").unwrap(),
+                    Some("index".to_string()),
+                ))
+                .build();
+
+            assert_eq!(document_obj.header, expected);
+        }
+
+        #[test]
+        fn single_footer_line() {
+            use FooterLine::*;
+
+            let expected = Some(vec![LinkLine(
+                Url::parse("https://localhost:3000/").unwrap(),
+                None,
+            )]);
+
+            let document_obj = Document::builder()
+                .add_footer_line(LinkLine(
+                    Url::parse("https://localhost:3000/").unwrap(),
+                    None,
+                ))
+                .build();
+
+            assert_eq!(document_obj.footer, expected);
+        }
+
+        #[test]
+        fn multiple_footer_lines() {
+            use FooterLine::*;
+
+            let expected = Some(vec![
+                LinkLine(Url::parse("https://localhost:3000/").unwrap(), None),
+                LinkLine(
+                    Url::parse("https://localhost:3000/index.athn").unwrap(),
+                    Some("index".to_string()),
+                ),
+            ]);
+
+            let document_obj = Document::builder()
+                .add_footer_line(LinkLine(
+                    Url::parse("https://localhost:3000/").unwrap(),
+                    None,
+                ))
+                .add_footer_line(LinkLine(
+                    Url::parse("https://localhost:3000/index.athn").unwrap(),
+                    Some("index".to_string()),
+                ))
+                .build();
+
+            assert_eq!(document_obj.footer, expected);
         }
     }
 }
