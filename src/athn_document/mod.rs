@@ -71,15 +71,49 @@ pub enum Level {
 
 impl MetadataBuilder {
     pub fn new() -> MetadataBuilder {
-        // Set the minimally required fields
-        MetadataBuilder {
-            title: String::new(),
-            subtitle: None,
-            author: None,
-            license: None,
-            language: None,
-            cache: None,
-        }
+        MetadataBuilder::default()
+    }
+
+    pub fn title(mut self, title: String) -> MetadataBuilder {
+        self.title = title;
+        self
+    }
+
+    pub fn subtitle(mut self, subtitle: String) -> MetadataBuilder {
+        self.subtitle = Some(subtitle);
+        self
+    }
+
+    pub fn add_author_unfailing(mut self, author: String) -> MetadataBuilder {
+        // Add an author if there's room for one
+        if self.author.clone().unwrap_or_default().len() == 16 {
+            return self;
+        };
+        self.author = Some([self.author.unwrap_or(vec![]), vec![author]].concat());
+        self
+    }
+
+    pub fn add_license_unfailing(mut self, license: String) -> MetadataBuilder {
+        // Add a license if there's room for one
+        if self.license.clone().unwrap_or_default().len() == 4 {
+            return self;
+        };
+        self.license = Some([self.license.unwrap_or(vec![]), vec![license]].concat());
+        self
+    }
+
+    pub fn add_language_unfailing(mut self, language: String) -> MetadataBuilder {
+        // Add a language if there's room for one
+        if self.language.clone().unwrap_or_default().len() == 256 {
+            return self;
+        };
+        self.language = Some([self.language.unwrap_or(vec![]), vec![language]].concat());
+        self
+    }
+
+    pub fn cache(mut self, cache: u32) -> MetadataBuilder {
+        self.cache = Some(cache);
+        self
     }
 
     pub fn build(self) -> Metadata {
@@ -108,15 +142,163 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    mod metadatabuilder_tests {
+        use super::super::*;
 
-    #[test]
-    fn metadatabuilder_test() {
-        let expected_title = String::new();
+        #[test]
+        fn build_test() {
+            let expected_title = String::new();
 
-        let metadata_obj = Metadata::builder().build();
+            let metadata_obj = Metadata::builder().build();
 
-        assert_eq!(expected_title, metadata_obj.title);
+            assert_eq!(expected_title, metadata_obj.title);
+        }
+
+        #[test]
+        fn set_title() {
+            let expected = String::from("Hello world!");
+
+            let metadata_obj = Metadata::builder()
+                .title("Hello world!".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.title, expected);
+        }
+
+        #[test]
+        fn set_subtitle() {
+            let expected = Some(String::from("Hello world!"));
+
+            let metadata_obj = Metadata::builder()
+                .subtitle("Hello world!".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.subtitle, expected);
+        }
+
+        #[test]
+        fn set_single_author() {
+            let expected = Some(vec!["Author 1".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_author_unfailing("Author 1".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.author, expected);
+        }
+
+        #[test]
+        fn set_multiple_author() {
+            let expected = Some(vec!["Author 1".to_string(), "Author 2".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_author_unfailing("Author 1".to_string())
+                .add_author_unfailing("Author 2".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.author, expected);
+        }
+
+        #[test]
+        fn set_too_many_authors() {
+            let expected = Some(vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string(), "5".to_string(), "6".to_string(), "7".to_string(), "8".to_string(), "9".to_string(), "10".to_string(), "11".to_string(), "12".to_string(), "13".to_string(), "14".to_string(), "15".to_string(), "16".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_author_unfailing("1".to_string())
+                .add_author_unfailing("2".to_string())
+                .add_author_unfailing("3".to_string())
+                .add_author_unfailing("4".to_string())
+                .add_author_unfailing("5".to_string())
+                .add_author_unfailing("6".to_string())
+                .add_author_unfailing("7".to_string())
+                .add_author_unfailing("8".to_string())
+                .add_author_unfailing("9".to_string())
+                .add_author_unfailing("10".to_string())
+                .add_author_unfailing("11".to_string())
+                .add_author_unfailing("12".to_string())
+                .add_author_unfailing("13".to_string())
+                .add_author_unfailing("14".to_string())
+                .add_author_unfailing("15".to_string())
+                .add_author_unfailing("16".to_string())
+                .add_author_unfailing("17".to_string())
+                .add_author_unfailing("18".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.author, expected);
+        }
+
+        #[test]
+        fn set_license() {
+            let expected = Some(vec!["CC0-1.0".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_license_unfailing("CC0-1.0".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.license, expected);
+        }
+
+        #[test]
+        fn set_multiple_licenses() {
+            let expected = Some(vec!["CC0-1.0".to_string(), "Unlicense".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_license_unfailing("CC0-1.0".to_string())
+                .add_license_unfailing("Unlicense".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.license, expected);
+        }
+
+        #[test]
+        fn set_too_many_licenses() {
+            let expected = Some(vec!["CC0-1.0".to_string(), "CC0-1.0".to_string(), "CC0-1.0".to_string(), "CC0-1.0".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_license_unfailing("CC0-1.0".to_string())
+                .add_license_unfailing("CC0-1.0".to_string())
+                .add_license_unfailing("CC0-1.0".to_string())
+                .add_license_unfailing("CC0-1.0".to_string())
+                .add_license_unfailing("CC0-1.0".to_string())
+                .add_license_unfailing("Unlicense".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.license, expected);
+        }
+
+        #[test]
+        fn set_lang() {
+            let expected = Some(vec!["en".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_language_unfailing("en".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.language, expected);
+        }
+
+        #[test]
+        fn set_multiple_langs() {
+            let expected = Some(vec!["en_US".to_string(), "en_GB".to_string()]);
+
+            let metadata_obj = Metadata::builder()
+                .add_language_unfailing("en_US".to_string())
+                .add_language_unfailing("en_GB".to_string())
+                .build();
+
+            assert_eq!(metadata_obj.language, expected);
+        }
+
+        #[test]
+        fn set_cache() {
+            let expected = Some(100);
+
+            let metadata_obj = Metadata::builder()
+                .cache(100)
+                .build();
+
+            assert_eq!(metadata_obj.cache, expected);
+        }
     }
 }
 
