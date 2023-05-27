@@ -15,6 +15,7 @@ codegen-units = 1
 adw = { version = "0.4.1", package = "libadwaita", features = ["v1_3"] }
 gtk = { version = "0.6.6", package = "gtk4", features = ["v4_10"] }
 reqwest = { version = "0.11.17", default-features = false, features = ["blocking", "rustls-tls"] }
+url = "2.3.1"
 
 [build-dependencies]
 glib-build-tools = "0.17.0"

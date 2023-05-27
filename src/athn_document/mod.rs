@@ -1,4 +1,4 @@
-use reqwest::Url;
+use url::Url;
 
 #[derive(PartialEq, Debug)]
 pub struct Document {
@@ -148,6 +148,20 @@ impl MetadataBuilder {
             cache: self.cache,
         }
     }
+
+    fn parse(self, line: &str) -> Result<MetadataBuilder, &str> {
+        // Parses a metadata line and returns a builder with the corresponding changes applied to
+        // it. Panics if the input line is shorter than 3 bytes.
+        match line.split_at(3) {
+            ("TI ", val) => Ok(self.title(val.to_string())),
+            ("ST ", val) => Ok(self.subtitle(val.to_string())),
+            ("AU ", val) => Ok(self.add_author_unfailing(val.to_string())),
+            ("LI ", val) => Ok(self.add_license_unfailing(val.to_string())),
+            ("LA ", val) => Ok(self.add_language_unfailing(val.to_string())),
+            ("CH ", val) => Ok(self.cache(val.parse().unwrap())), // TODO: Get rid of this unwrap
+            (_, _) => Err("Invalid Metadata tag line encountered"),
+        }
+    }
 }
 
 impl DocumentBuilder {
@@ -217,76 +231,29 @@ pub fn parse(
                 Section::Meta => {
                     // split_at will panic if the line is shorter than 3 bytes, it's not valid
                     // anyways if it is, so we can just Err if that happens
-                    if current_line.len() <= 3 {
+                    if current_line.len() < 3 {
                         return Err("Invalid Metadata tag line encountered (too short)");
                     };
-                    // Match on the different valid metadata tags and Err if a line is invalid
-                    match current_line.split_at(3) {
-                        ("TI ", val) => {
-                            return {
-                                builder.metadata = builder.metadata.title(val.to_string());
-                                parse(line, builder, current_section)
-                            }
-                        }
-                        ("ST ", val) => {
-                            return {
-                                builder.metadata = builder.metadata.subtitle(val.to_string());
-                                parse(line, builder, current_section)
-                            }
-                        }
-                        ("AU ", val) => {
-                            return {
-                                builder.metadata =
-                                    builder.metadata.add_author_unfailing(val.to_string());
-                                parse(line, builder, current_section)
-                            }
-                        }
-                        ("LI ", val) => {
-                            return {
-                                builder.metadata =
-                                    builder.metadata.add_license_unfailing(val.to_string());
-                                parse(line, builder, current_section)
-                            }
-                        }
-                        ("LA ", val) => {
-                            return {
-                                builder.metadata =
-                                    builder.metadata.add_language_unfailing(val.to_string());
-                                parse(line, builder, current_section)
-                            }
-                        }
-                        ("CH ", val) => match val.parse() {
-                            Err(_) => return Err("Invalid cache duration metadata tag content"),
-                            Ok(parsed) => {
-                                return {
-                                    builder.metadata = builder.metadata.cache(parsed);
-                                    parse(line, builder, current_section)
-                                }
-                            }
-                        },
-                        (_, _) => return Err("Invalid Metadata tag line encountered"),
-                    }
+                    builder.metadata = builder.metadata.parse(current_line)?;
+                    parse(line, builder, current_section)
                 }
 
                 Section::Main | Section::Form => {
                     // split_at will panic if the line is shorter than 3 bytes, if it is we know
                     // that the line is a text line
-                    if current_line.len() <= 3 {
+                    if current_line.len() < 3 {
                         return parse(
                             line,
                             builder.add_main_line(MainLine::TextLine(current_line.to_string())),
                             current_section,
                         );
                     };
-                    // Match on all the different possible LTIs, if it doesnt match it's a text line
-                    match current_line.split_at(3) {
-                        ("---", _) => parse(line, builder.add_main_line(MainLine::SeparatorLine), current_section),
-                        (_, _) => parse(
-                            line,
-                            builder.add_main_line(MainLine::TextLine(current_line.to_string())),
-                            current_section,
-                        ),
-                    }
+                    // Call the MainLine parser on it
+                    parse(
+                        line,
+                        builder.add_main_line(MainLine::parse(current_line)?),
+                        current_section,
+                    )
                 }
                 _ => parse(
                     line,
@@ -296,6 +263,77 @@ pub fn parse(
             }
         }
     }
+}
+
+impl MainLine {
+    fn parse(input: &str) -> Result<MainLine, &str> {
+        // Parses a string slice of a main line and returns the correct object.
+        // Panics if the input line is shorter than 3 bytes.
+        use MainLine::*;
+        use Level::*;
+        match input.split_at(3) {
+            ("=> ", val) => Ok(parse_link_line(val).unwrap()), // TODO: Get rid of that unwrap
+            // Preformatted lines
+            ("```", val) => Ok(PreformattedLine(false, val.to_string())),
+            ("'''", val) => Ok(PreformattedLine(true, val.to_string())),
+            ("---", _) => Ok(SeparatorLine),
+            // Unordered lists
+            ("1* ", val) => Ok(UListLine(One, val.to_string())),
+            ("2* ", val) => Ok(UListLine(Two, val.to_string())),
+            ("3* ", val) => Ok(UListLine(Three, val.to_string())),
+            ("4* ", val) => Ok(UListLine(Four, val.to_string())),
+            ("5* ", val) => Ok(UListLine(Five, val.to_string())),
+            ("6* ", val) => Ok(UListLine(Six, val.to_string())),
+            // Ordered lists (need the split_by_separator function)
+            ("1- ", val) => {
+                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                Ok(OListLine(One, bullet.to_string(), content.to_string()))
+            }
+            ("2- ", val) => {
+                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                Ok(OListLine(Two, bullet.to_string(), content.to_string()))
+            }
+            ("3- ", val) => {
+                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                Ok(OListLine(Three, bullet.to_string(), content.to_string()))
+            }
+            ("4- ", val) => {
+                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                Ok(OListLine(Four, bullet.to_string(), content.to_string()))
+            }
+            ("5- ", val) => {
+                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                Ok(OListLine(Five, bullet.to_string(), content.to_string()))
+            }
+            ("6- ", val) => {
+                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                Ok(OListLine(Six, bullet.to_string(), content.to_string()))
+            }
+            ("\\/ ", val) => {
+                let (label, content) = val.split_once(" | ").ok_or("Dropdown line without ' | ' delimiter found")?;
+                Ok(DropdownLine(label.to_string(), content.to_string()))
+            }
+            // Headings
+            ("#1 ", val) => Ok(HeadingLine(One, val.to_string())),
+            ("#2 ", val) => Ok(HeadingLine(Two, val.to_string())),
+            ("#3 ", val) => Ok(HeadingLine(Three, val.to_string())),
+            ("#4 ", val) => Ok(HeadingLine(Four, val.to_string())),
+            ("#5 ", val) => Ok(HeadingLine(Five, val.to_string())),
+            ("#6 ", val) => Ok(HeadingLine(Six, val.to_string())),
+            (">> ", val) => Ok(QuoteLine(val.to_string())),
+            (_, _) => Ok(TextLine(input.to_string())),
+        }
+    }
+}
+
+fn parse_link_line(input: &str) -> Result<MainLine, url::ParseError> {
+    // Takes the content of a link line and parses it into a LinkLine object
+    let separator_index = input.find(" ").unwrap_or(input.len());
+    let (url, label) = input.split_at(separator_index);
+    Ok(MainLine::LinkLine(
+        Url::parse(url)?,
+        Some(label.get(1..).unwrap_or_default().to_string()),
+    )) // TODO: Make the label None if there's no space
 }
 
 impl Document {
@@ -319,7 +357,7 @@ mod tests {
         fn basic_example() {
             let expected = Document::builder().build();
 
-            let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++\n\n()\nLittle text line makes the test fail\n---\n";
+            let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n#1 Heading 1\n#2 Heading 2\n#4 Heading 4\n>> I never said that  - Albert Einstein";
 
             let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
 
@@ -644,316 +682,3 @@ mod tests {
         }
     }
 }
-
-/*
-impl Document {
-    pub fn new(title: String) -> Document {
-        Document {
-            metadata: Metadata::new(title),
-            main_lines: vec![],
-        }
-    }
-
-    pub fn from_str(input: &str) -> Result<Document, &str> {
-        // Find the metadata section and store it in a variable
-        let metadata_section = match input.find("--- Meta\n") {
-            None => return Err("No metadata section found"),
-            Some(start_index) => match input.find("---\n") {
-                None => return Err("Meta section found but not ended"),
-                Some(end_index) => input.get(start_index + 9..end_index).unwrap(),
-            },
-        };
-        // Parse the metadata section
-        let metadata_parsed = Metadata::from_str(metadata_section)?;
-
-        // Find the main section and store it
-        let main_section = match input.find("---\n") {
-            None => return Err("No main section found"),
-            Some(i) => input.get(i + 4..).unwrap(),
-        };
-        // Iterate over each line of the main section and convert it to an AthnMainLine with the
-        // enum's from_str function
-        let main_lines = main_section
-            .lines()
-            .map(|line| MainLine::from_str(line))
-            .collect();
-
-        Ok(Document {
-            metadata: metadata_parsed,
-            main_lines,
-        })
-    }
-}
-
-impl Metadata {
-    fn new(title: String) -> Metadata {
-        Metadata {
-            title,
-            subtitle: None,
-            author: None,
-            license: None,
-            language: None,
-            cache: None,
-        }
-    }
-
-    fn from_str(input: &str) -> Result<Metadata, &str> {
-        let mut metadata = Metadata::new("Default title".to_string());
-
-        for line in input.lines() {
-            match line.split_at(3) {
-                ("TI ", val) => metadata.title = val.to_string(),
-                ("ST ", val) => metadata.subtitle = Some(val.to_string()),
-                ("AU ", val) => {
-                    metadata.author =
-                        Some([metadata.author.unwrap_or(vec![]), vec![val.to_string()]].concat())
-                }
-                ("LI ", val) => {
-                    metadata.license =
-                        Some([metadata.license.unwrap_or(vec![]), vec![val.to_string()]].concat())
-                }
-                ("LA ", val) => {
-                    metadata.language =
-                        Some([metadata.language.unwrap_or(vec![]), vec![val.to_string()]].concat())
-                }
-                ("CH ", val) => match val.parse() {
-                    Err(_) => return Err("Invalid value for cache duration metadata tag"),
-                    Ok(val) => metadata.cache = Some(val),
-                },
-                (_, val) => println!("Hit catchall with value: {}", val),
-            }
-        }
-
-        Ok(metadata)
-    }
-}
-
-impl MainLine {
-    fn from_str(input: &str) -> MainLine {
-        use MainLine::*;
-
-        if input.len() <= 2 {
-            return TextLine(input.to_string())
-        };
-        match input.split_at(2) {
-            ("# ", val) => HeadingLine(HeadingLevel::One, val.to_string()),
-            ("##", val) => match val.find(" ") {
-                Some(0) => HeadingLine(HeadingLevel::Two, val.get(1..).unwrap().to_string()),
-                Some(1) => HeadingLine(HeadingLevel::Three, val.get(2..).unwrap().to_string()),
-                Some(2) => HeadingLine(HeadingLevel::Four, val.get(3..).unwrap().to_string()),
-                Some(3) => HeadingLine(HeadingLevel::Five, val.get(4..).unwrap().to_string()),
-                Some(4) => HeadingLine(HeadingLevel::Six, val.get(5..).unwrap().to_string()),
-                _ => TextLine(input.to_string()),
-            }
-            (_, _) => TextLine(input.to_string()),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    mod document_from_str_tests {
-        use super::super::*;
-
-        #[test]
-        fn find_single_text_line() {
-            let expected = vec![MainLine::TextLine("Hello world!".to_string())];
-
-            let input = "--- Meta\nTI Test\n---\nHello world!\n";
-
-            let result = Document::from_str(input);
-
-            assert_eq!(result.unwrap().main_lines, expected);
-        }
-    }
-
-    mod main_line_from_str_tests {
-        use super::super::*;
-
-        #[test]
-        fn find_basic_text_line() {
-            let expected = MainLine::TextLine("Hello world!".to_string());
-
-            let line = "Hello world!";
-
-            let result = MainLine::from_str(line);
-
-            assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn find_heading_line() {
-            let expected = MainLine::HeadingLine(HeadingLevel::One, "Hello world!".to_string());
-
-            let line = "# Hello world!";
-
-            let result = MainLine::from_str(line);
-
-            assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn find_heading6_line() {
-            let expected = MainLine::HeadingLine(HeadingLevel::Six, "Hello world!".to_string());
-
-            let line = "###### Hello world!";
-
-            let result = MainLine::from_str(line);
-
-            assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn find_text_line_that_looks_like_a_heading() {
-            let expected = MainLine::TextLine("##########This is actually not a heading line".to_string());
-
-            let line = "##########This is actually not a heading line";
-
-            let result = MainLine::from_str(line);
-
-            assert_eq!(result, expected);
-        }
-    }
-
-    mod metadata_from_str_tests {
-        use super::super::*;
-
-        #[test]
-        fn find_title() {
-            let expected = "Test".to_string();
-
-            let meta_section = "TI Test\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().title, expected);
-        }
-
-        #[test]
-        fn find_subtitle() {
-            let expected = Some("This is a subtitle".to_string());
-
-            let meta_section = "TI Test\nST This is a subtitle";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().subtitle, expected);
-        }
-
-        #[test]
-        fn find_0_authors() {
-            let expected = None;
-
-            let meta_section = "TI Test\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().author, expected);
-        }
-
-        #[test]
-        fn find_1_author() {
-            let expected = Some(vec!["Some author".to_string()]);
-
-            let meta_section = "TI Test\nAU Some author\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().author, expected);
-        }
-
-        #[test]
-        fn find_multiple_authors() {
-            let expected = Some(vec![
-                "Some author".to_string(),
-                "Another author".to_string(),
-                "3rd author".to_string(),
-            ]);
-
-            let meta_section = "TI Test\nAU Some author\nAU Another author\nAU 3rd author\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().author, expected);
-        }
-
-        #[test]
-        fn find_0_licenses() {
-            let expected = None;
-
-            let meta_section = "TI Test\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().license, expected);
-        }
-
-        #[test]
-        fn find_1_license() {
-            let expected = Some(vec!["GPL-3.0-or-later".to_string()]);
-
-            let meta_section = "TI Test\nAU Some author\nLI GPL-3.0-or-later";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().license, expected);
-        }
-
-        #[test]
-        fn find_multiple_licenses() {
-            let expected = Some(vec![
-                "GPL-3.0-or-later".to_string(),
-                "CC-BY-SA-4.0".to_string(),
-            ]);
-
-            let meta_section = "TI Test\nLI GPL-3.0-or-later\nLI CC-BY-SA-4.0\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().license, expected);
-        }
-
-        #[test]
-        fn find_multiple_languages() {
-            let expected = Some(vec!["en".to_string(), "de".to_string()]);
-
-            let meta_section = "TI Test\nLA en\nLA de\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().language, expected);
-        }
-
-        #[test]
-        fn find_no_cache_duration() {
-            let expected = None;
-
-            let meta_section = "TI Test\n";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().cache, expected);
-        }
-
-        #[test]
-        fn find_valid_cache_duration() {
-            let expected = Some(100);
-
-            let meta_section = "TI Test\nAU Some author\nLI GPL-3.0-or-later\nCH 100";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert_eq!(result.unwrap().cache, expected);
-        }
-
-        #[test]
-        fn find_invalid_cache_duration() {
-            let meta_section = "TI Test\nAU Some author\nLI GPL-3.0-or-later\nCH 1o0";
-
-            let result = Metadata::from_str(meta_section);
-
-            assert!(result.is_err());
-        }
-    }
-}
-*/
