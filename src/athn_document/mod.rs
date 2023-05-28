@@ -52,7 +52,9 @@ pub struct MetadataBuilder {
 // A single line in the main section
 pub enum MainLine {
     TextLine(String),
-    LinkLine(Url, Option<String>),
+    LinkLine((Url, Option<String>)), // The LinkLine doesnt use a Url type for its url component
+                                     // because relative URLs are allowed, and we dont know the
+                                     // base URL yet, the URL will have to be parsed later
     PreformattedLine(bool, String),
     SeparatorLine,
     UListLine(Level, String),
@@ -64,12 +66,12 @@ pub enum MainLine {
 
 #[derive(PartialEq, Debug)]
 pub enum HeaderLine {
-    LinkLine(Url, Option<String>),
+    LinkLine((Url, Option<String>)),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum FooterLine {
-    LinkLine(Url, Option<String>),
+    LinkLine((Url, Option<String>)),
     TextLine(String),
 }
 
@@ -255,11 +257,24 @@ pub fn parse(
                         current_section,
                     )
                 }
-                _ => parse(
-                    line,
-                    builder.add_main_line(MainLine::TextLine(current_line.to_string())),
-                    current_section,
-                ),
+                Section::Header => match current_line.split_once("=> ") {
+                    None => Err("Invalid header line encountered"),
+                    Some((_, val)) => parse(
+                        line,
+                        builder
+                            .add_header_line(HeaderLine::LinkLine(parse_link_line(val).unwrap())),
+                        current_section,
+                    ),
+                },
+                Section::Footer => match current_line.split_once("=> ") {
+                    Some((_, val)) => parse(
+                        line,
+                        builder
+                            .add_footer_line(FooterLine::LinkLine(parse_link_line(val).unwrap())),
+                        current_section,
+                    ),
+                    None => parse(line, builder.add_footer_line(FooterLine::TextLine(current_line.to_string())), current_section)
+                },
             }
         }
     }
@@ -269,10 +284,10 @@ impl MainLine {
     fn parse(input: &str) -> Result<MainLine, &str> {
         // Parses a string slice of a main line and returns the correct object.
         // Panics if the input line is shorter than 3 bytes.
-        use MainLine::*;
         use Level::*;
+        use MainLine::*;
         match input.split_at(3) {
-            ("=> ", val) => Ok(parse_link_line(val).unwrap()), // TODO: Get rid of that unwrap
+            ("=> ", val) => Ok(LinkLine(parse_link_line(val).unwrap())), // TODO: Get rid of that unwrap
             // Preformatted lines
             ("```", val) => Ok(PreformattedLine(false, val.to_string())),
             ("'''", val) => Ok(PreformattedLine(true, val.to_string())),
@@ -286,31 +301,45 @@ impl MainLine {
             ("6* ", val) => Ok(UListLine(Six, val.to_string())),
             // Ordered lists (need the split_by_separator function)
             ("1- ", val) => {
-                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                let (bullet, content) = val
+                    .split_once(" ")
+                    .ok_or("Invalid ordered list line found")?;
                 Ok(OListLine(One, bullet.to_string(), content.to_string()))
             }
             ("2- ", val) => {
-                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                let (bullet, content) = val
+                    .split_once(" ")
+                    .ok_or("Invalid ordered list line found")?;
                 Ok(OListLine(Two, bullet.to_string(), content.to_string()))
             }
             ("3- ", val) => {
-                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                let (bullet, content) = val
+                    .split_once(" ")
+                    .ok_or("Invalid ordered list line found")?;
                 Ok(OListLine(Three, bullet.to_string(), content.to_string()))
             }
             ("4- ", val) => {
-                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                let (bullet, content) = val
+                    .split_once(" ")
+                    .ok_or("Invalid ordered list line found")?;
                 Ok(OListLine(Four, bullet.to_string(), content.to_string()))
             }
             ("5- ", val) => {
-                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                let (bullet, content) = val
+                    .split_once(" ")
+                    .ok_or("Invalid ordered list line found")?;
                 Ok(OListLine(Five, bullet.to_string(), content.to_string()))
             }
             ("6- ", val) => {
-                let (bullet, content) = val.split_once(" ").ok_or("Invalid ordered list line found")?;
+                let (bullet, content) = val
+                    .split_once(" ")
+                    .ok_or("Invalid ordered list line found")?;
                 Ok(OListLine(Six, bullet.to_string(), content.to_string()))
             }
             ("\\/ ", val) => {
-                let (label, content) = val.split_once(" | ").ok_or("Dropdown line without ' | ' delimiter found")?;
+                let (label, content) = val
+                    .split_once(" | ")
+                    .ok_or("Dropdown line without ' | ' delimiter found")?;
                 Ok(DropdownLine(label.to_string(), content.to_string()))
             }
             // Headings
@@ -326,26 +355,12 @@ impl MainLine {
     }
 }
 
-fn parse_link_line(input: &str) -> Result<MainLine, url::ParseError> {
+fn parse_link_line(input: &str) -> Result<(Url, Option<String>), url::ParseError> {
     // Takes the content of a link line and parses it into a LinkLine object
-    let separator_index = input.find(" ").unwrap_or(input.len());
-    let (url, label) = input.split_at(separator_index);
-    Ok(MainLine::LinkLine(
-        Url::parse(url)?,
-        Some(label.get(1..).unwrap_or_default().to_string()),
-    )) // TODO: Make the label None if there's no space
-}
-
-impl Document {
-    // Non functional temporary function, it wont compile without it
-    pub fn from_str(_input: &str) -> Result<Document, &str> {
-        Ok(Document {
-            metadata: Metadata::builder().build(),
-            main: vec![],
-            header: None,
-            footer: None,
-        })
-    }
+    Ok(match input.split_once(" ") {
+        Some((url, label)) => (Url::parse(url)?, Some(label.to_string())),
+        None => (Url::parse(input)?, None),
+    })
 }
 
 #[cfg(test)]
@@ -357,7 +372,7 @@ mod tests {
         fn basic_example() {
             let expected = Document::builder().build();
 
-            let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n#1 Heading 1\n#2 Heading 2\n#4 Heading 4\n>> I never said that  - Albert Einstein";
+            let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++ Header\n=> /index.athn Homepage\n=> /about.athn About\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n#1 Heading 1\n#2 Heading 2\n#4 Heading 4\n>> I never said that  - Albert Einstein\n+++ Footer\nThis is just a boring old footer\n=> /privacy.athn Privacy policy";
 
             let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
 
@@ -595,16 +610,16 @@ mod tests {
         fn single_header_line() {
             use HeaderLine::*;
 
-            let expected = Some(vec![LinkLine(
+            let expected = Some(vec![LinkLine((
                 Url::parse("https://localhost:3000/").unwrap(),
                 None,
-            )]);
+            ))]);
 
             let document_obj = Document::builder()
-                .add_header_line(LinkLine(
+                .add_header_line(LinkLine((
                     Url::parse("https://localhost:3000/").unwrap(),
                     None,
-                ))
+                )))
                 .build();
 
             assert_eq!(document_obj.header, expected);
@@ -615,22 +630,22 @@ mod tests {
             use HeaderLine::*;
 
             let expected = Some(vec![
-                LinkLine(Url::parse("https://localhost:3000/").unwrap(), None),
-                LinkLine(
+                LinkLine((Url::parse("https://localhost:3000/").unwrap(), None)),
+                LinkLine((
                     Url::parse("https://localhost:3000/index.athn").unwrap(),
                     Some("index".to_string()),
-                ),
+                )),
             ]);
 
             let document_obj = Document::builder()
-                .add_header_line(LinkLine(
+                .add_header_line(LinkLine((
                     Url::parse("https://localhost:3000/").unwrap(),
                     None,
-                ))
-                .add_header_line(LinkLine(
+                )))
+                .add_header_line(LinkLine((
                     Url::parse("https://localhost:3000/index.athn").unwrap(),
                     Some("index".to_string()),
-                ))
+                )))
                 .build();
 
             assert_eq!(document_obj.header, expected);
@@ -640,16 +655,16 @@ mod tests {
         fn single_footer_line() {
             use FooterLine::*;
 
-            let expected = Some(vec![LinkLine(
+            let expected = Some(vec![LinkLine((
                 Url::parse("https://localhost:3000/").unwrap(),
                 None,
-            )]);
+            ))]);
 
             let document_obj = Document::builder()
-                .add_footer_line(LinkLine(
+                .add_footer_line(LinkLine((
                     Url::parse("https://localhost:3000/").unwrap(),
                     None,
-                ))
+                )))
                 .build();
 
             assert_eq!(document_obj.footer, expected);
@@ -660,22 +675,22 @@ mod tests {
             use FooterLine::*;
 
             let expected = Some(vec![
-                LinkLine(Url::parse("https://localhost:3000/").unwrap(), None),
-                LinkLine(
+                LinkLine((Url::parse("https://localhost:3000/").unwrap(), None)),
+                LinkLine((
                     Url::parse("https://localhost:3000/index.athn").unwrap(),
                     Some("index".to_string()),
-                ),
+                )),
             ]);
 
             let document_obj = Document::builder()
-                .add_footer_line(LinkLine(
+                .add_footer_line(LinkLine((
                     Url::parse("https://localhost:3000/").unwrap(),
                     None,
-                ))
-                .add_footer_line(LinkLine(
+                )))
+                .add_footer_line(LinkLine((
                     Url::parse("https://localhost:3000/index.athn").unwrap(),
                     Some("index".to_string()),
-                ))
+                )))
                 .build();
 
             assert_eq!(document_obj.footer, expected);
