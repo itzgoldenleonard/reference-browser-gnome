@@ -1,5 +1,3 @@
-use url::Url;
-
 #[derive(PartialEq, Debug)]
 pub struct Document {
     pub metadata: Metadata,
@@ -52,9 +50,7 @@ pub struct MetadataBuilder {
 // A single line in the main section
 pub enum MainLine {
     TextLine(String),
-    LinkLine((Url, Option<String>)), // The LinkLine doesnt use a Url type for its url component
-                                     // because relative URLs are allowed, and we dont know the
-                                     // base URL yet, the URL will have to be parsed later
+    LinkLine(Link),
     PreformattedLine(bool, String),
     SeparatorLine,
     UListLine(Level, String),
@@ -65,13 +61,20 @@ pub enum MainLine {
 }
 
 #[derive(PartialEq, Debug)]
+pub struct Link {
+    // The Link doesnt use a Url type for its url component because relative URLs are allowed, and we dont know the base URL yet, the URL will have to be parsed later when we know its base
+    pub url: String,
+    pub label: Option<String>,
+}
+
+#[derive(PartialEq, Debug)]
 pub enum HeaderLine {
-    LinkLine((Url, Option<String>)),
+    LinkLine(Link),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum FooterLine {
-    LinkLine((Url, Option<String>)),
+    LinkLine(Link),
     TextLine(String),
 }
 
@@ -160,7 +163,7 @@ impl MetadataBuilder {
             ("AU ", val) => Ok(self.add_author_unfailing(val.to_string())),
             ("LI ", val) => Ok(self.add_license_unfailing(val.to_string())),
             ("LA ", val) => Ok(self.add_language_unfailing(val.to_string())),
-            ("CH ", val) => Ok(self.cache(val.parse().unwrap())), // TODO: Get rid of this unwrap
+            ("CH ", val) => Ok(self.cache(val.parse().map_err(|_| "Invalid cache tag value")?)),
             (_, _) => Err("Invalid Metadata tag line encountered"),
         }
     }
@@ -261,19 +264,21 @@ pub fn parse(
                     None => Err("Invalid header line encountered"),
                     Some((_, val)) => parse(
                         line,
-                        builder
-                            .add_header_line(HeaderLine::LinkLine(parse_link_line(val).unwrap())),
+                        builder.add_header_line(HeaderLine::LinkLine(Link::parse(val))),
                         current_section,
                     ),
                 },
                 Section::Footer => match current_line.split_once("=> ") {
                     Some((_, val)) => parse(
                         line,
-                        builder
-                            .add_footer_line(FooterLine::LinkLine(parse_link_line(val).unwrap())),
+                        builder.add_footer_line(FooterLine::LinkLine(Link::parse(val))),
                         current_section,
                     ),
-                    None => parse(line, builder.add_footer_line(FooterLine::TextLine(current_line.to_string())), current_section)
+                    None => parse(
+                        line,
+                        builder.add_footer_line(FooterLine::TextLine(current_line.to_string())),
+                        current_section,
+                    ),
                 },
             }
         }
@@ -287,7 +292,7 @@ impl MainLine {
         use Level::*;
         use MainLine::*;
         match input.split_at(3) {
-            ("=> ", val) => Ok(LinkLine(parse_link_line(val).unwrap())), // TODO: Get rid of that unwrap
+            ("=> ", val) => Ok(LinkLine(Link::parse(val))),
             // Preformatted lines
             ("```", val) => Ok(PreformattedLine(false, val.to_string())),
             ("'''", val) => Ok(PreformattedLine(true, val.to_string())),
@@ -355,345 +360,21 @@ impl MainLine {
     }
 }
 
-fn parse_link_line(input: &str) -> Result<(Url, Option<String>), url::ParseError> {
-    // Takes the content of a link line and parses it into a LinkLine object
-    Ok(match input.split_once(" ") {
-        Some((url, label)) => (Url::parse(url)?, Some(label.to_string())),
-        None => (Url::parse(input)?, None),
-    })
+impl Link {
+    fn parse(input: &str) -> Link {
+        // Takes the content of a link line and parses it into a Link object
+        match input.split_once(" ") {
+            Some((url, label)) => Link {
+                url: url.to_string(),
+                label: Some(label.to_string()),
+            },
+            None => Link {
+                url: input.to_string(),
+                label: None,
+            },
+        }
+    }
 }
 
 #[cfg(test)]
-mod tests {
-    mod parse_tests {
-        use super::super::*;
-
-        #[test]
-        fn basic_example() {
-            let expected = Document::builder().build();
-
-            let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++ Header\n=> /index.athn Homepage\n=> /about.athn About\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n#1 Heading 1\n#2 Heading 2\n#4 Heading 4\n>> I never said that  - Albert Einstein\n+++ Footer\nThis is just a boring old footer\n=> /privacy.athn Privacy policy";
-
-            let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
-
-            assert_eq!(document.build(), expected);
-        }
-    }
-
-    mod metadatabuilder_tests {
-        use super::super::*;
-
-        #[test]
-        fn build_test() {
-            let expected_title = String::new();
-
-            let metadata_obj = Metadata::builder().build();
-
-            assert_eq!(expected_title, metadata_obj.title);
-        }
-
-        #[test]
-        fn set_title() {
-            let expected = String::from("Hello world!");
-
-            let metadata_obj = Metadata::builder()
-                .title("Hello world!".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.title, expected);
-        }
-
-        #[test]
-        fn set_subtitle() {
-            let expected = Some(String::from("Hello world!"));
-
-            let metadata_obj = Metadata::builder()
-                .subtitle("Hello world!".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.subtitle, expected);
-        }
-
-        #[test]
-        fn set_single_author() {
-            let expected = Some(vec!["Author 1".to_string()]);
-
-            let metadata_obj = Metadata::builder()
-                .add_author_unfailing("Author 1".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.author, expected);
-        }
-
-        #[test]
-        fn set_multiple_author() {
-            let expected = Some(vec!["Author 1".to_string(), "Author 2".to_string()]);
-
-            let metadata_obj = Metadata::builder()
-                .add_author_unfailing("Author 1".to_string())
-                .add_author_unfailing("Author 2".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.author, expected);
-        }
-
-        #[test]
-        fn set_too_many_authors() {
-            let expected = Some(vec![
-                "1".to_string(),
-                "2".to_string(),
-                "3".to_string(),
-                "4".to_string(),
-                "5".to_string(),
-                "6".to_string(),
-                "7".to_string(),
-                "8".to_string(),
-                "9".to_string(),
-                "10".to_string(),
-                "11".to_string(),
-                "12".to_string(),
-                "13".to_string(),
-                "14".to_string(),
-                "15".to_string(),
-                "16".to_string(),
-            ]);
-
-            let metadata_obj = Metadata::builder()
-                .add_author_unfailing("1".to_string())
-                .add_author_unfailing("2".to_string())
-                .add_author_unfailing("3".to_string())
-                .add_author_unfailing("4".to_string())
-                .add_author_unfailing("5".to_string())
-                .add_author_unfailing("6".to_string())
-                .add_author_unfailing("7".to_string())
-                .add_author_unfailing("8".to_string())
-                .add_author_unfailing("9".to_string())
-                .add_author_unfailing("10".to_string())
-                .add_author_unfailing("11".to_string())
-                .add_author_unfailing("12".to_string())
-                .add_author_unfailing("13".to_string())
-                .add_author_unfailing("14".to_string())
-                .add_author_unfailing("15".to_string())
-                .add_author_unfailing("16".to_string())
-                .add_author_unfailing("17".to_string())
-                .add_author_unfailing("18".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.author, expected);
-        }
-
-        #[test]
-        fn set_license() {
-            let expected = Some(vec!["CC0-1.0".to_string()]);
-
-            let metadata_obj = Metadata::builder()
-                .add_license_unfailing("CC0-1.0".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.license, expected);
-        }
-
-        #[test]
-        fn set_multiple_licenses() {
-            let expected = Some(vec!["CC0-1.0".to_string(), "Unlicense".to_string()]);
-
-            let metadata_obj = Metadata::builder()
-                .add_license_unfailing("CC0-1.0".to_string())
-                .add_license_unfailing("Unlicense".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.license, expected);
-        }
-
-        #[test]
-        fn set_too_many_licenses() {
-            let expected = Some(vec![
-                "CC0-1.0".to_string(),
-                "CC0-1.0".to_string(),
-                "CC0-1.0".to_string(),
-                "CC0-1.0".to_string(),
-            ]);
-
-            let metadata_obj = Metadata::builder()
-                .add_license_unfailing("CC0-1.0".to_string())
-                .add_license_unfailing("CC0-1.0".to_string())
-                .add_license_unfailing("CC0-1.0".to_string())
-                .add_license_unfailing("CC0-1.0".to_string())
-                .add_license_unfailing("CC0-1.0".to_string())
-                .add_license_unfailing("Unlicense".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.license, expected);
-        }
-
-        #[test]
-        fn set_lang() {
-            let expected = Some(vec!["en".to_string()]);
-
-            let metadata_obj = Metadata::builder()
-                .add_language_unfailing("en".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.language, expected);
-        }
-
-        #[test]
-        fn set_multiple_langs() {
-            let expected = Some(vec!["en_US".to_string(), "en_GB".to_string()]);
-
-            let metadata_obj = Metadata::builder()
-                .add_language_unfailing("en_US".to_string())
-                .add_language_unfailing("en_GB".to_string())
-                .build();
-
-            assert_eq!(metadata_obj.language, expected);
-        }
-
-        #[test]
-        fn set_cache() {
-            let expected = Some(100);
-
-            let metadata_obj = Metadata::builder().cache(100).build();
-
-            assert_eq!(metadata_obj.cache, expected);
-        }
-    }
-
-    mod documentbuilder_tests {
-        use super::super::*;
-
-        #[test]
-        fn build_test() {
-            let expected_obj = Document {
-                metadata: Metadata::builder().build(),
-                main: vec![],
-                header: None,
-                footer: None,
-            };
-
-            let document_obj = Document::builder().build();
-
-            assert_eq!(document_obj, expected_obj);
-        }
-
-        #[test]
-        fn single_main_line() {
-            use MainLine::*;
-
-            let expected = vec![SeparatorLine];
-
-            let document_obj = Document::builder().add_main_line(SeparatorLine).build();
-
-            assert_eq!(document_obj.main, expected);
-        }
-
-        #[test]
-        fn multiple_main_lines() {
-            use MainLine::*;
-
-            let expected = vec![
-                SeparatorLine,
-                HeadingLine(Level::One, "Line 2".to_string()),
-                TextLine("Line 3".to_string()),
-            ];
-
-            let document_obj = Document::builder()
-                .add_main_line(SeparatorLine)
-                .add_main_line(HeadingLine(Level::One, "Line 2".to_string()))
-                .add_main_line(TextLine("Line 3".to_string()))
-                .build();
-
-            assert_eq!(document_obj.main, expected);
-        }
-
-        #[test]
-        fn single_header_line() {
-            use HeaderLine::*;
-
-            let expected = Some(vec![LinkLine((
-                Url::parse("https://localhost:3000/").unwrap(),
-                None,
-            ))]);
-
-            let document_obj = Document::builder()
-                .add_header_line(LinkLine((
-                    Url::parse("https://localhost:3000/").unwrap(),
-                    None,
-                )))
-                .build();
-
-            assert_eq!(document_obj.header, expected);
-        }
-
-        #[test]
-        fn multiple_header_lines() {
-            use HeaderLine::*;
-
-            let expected = Some(vec![
-                LinkLine((Url::parse("https://localhost:3000/").unwrap(), None)),
-                LinkLine((
-                    Url::parse("https://localhost:3000/index.athn").unwrap(),
-                    Some("index".to_string()),
-                )),
-            ]);
-
-            let document_obj = Document::builder()
-                .add_header_line(LinkLine((
-                    Url::parse("https://localhost:3000/").unwrap(),
-                    None,
-                )))
-                .add_header_line(LinkLine((
-                    Url::parse("https://localhost:3000/index.athn").unwrap(),
-                    Some("index".to_string()),
-                )))
-                .build();
-
-            assert_eq!(document_obj.header, expected);
-        }
-
-        #[test]
-        fn single_footer_line() {
-            use FooterLine::*;
-
-            let expected = Some(vec![LinkLine((
-                Url::parse("https://localhost:3000/").unwrap(),
-                None,
-            ))]);
-
-            let document_obj = Document::builder()
-                .add_footer_line(LinkLine((
-                    Url::parse("https://localhost:3000/").unwrap(),
-                    None,
-                )))
-                .build();
-
-            assert_eq!(document_obj.footer, expected);
-        }
-
-        #[test]
-        fn multiple_footer_lines() {
-            use FooterLine::*;
-
-            let expected = Some(vec![
-                LinkLine((Url::parse("https://localhost:3000/").unwrap(), None)),
-                LinkLine((
-                    Url::parse("https://localhost:3000/index.athn").unwrap(),
-                    Some("index".to_string()),
-                )),
-            ]);
-
-            let document_obj = Document::builder()
-                .add_footer_line(LinkLine((
-                    Url::parse("https://localhost:3000/").unwrap(),
-                    None,
-                )))
-                .add_footer_line(LinkLine((
-                    Url::parse("https://localhost:3000/index.athn").unwrap(),
-                    Some("index".to_string()),
-                )))
-                .build();
-
-            assert_eq!(document_obj.footer, expected);
-        }
-    }
-}
+mod tests;
