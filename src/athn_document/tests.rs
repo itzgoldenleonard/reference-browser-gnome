@@ -11,6 +11,17 @@ mod parse_tests {
 
         assert_ne!(document.build(), expected);
     }
+
+    #[test]
+    fn form() {
+        let expected = Document::builder().build();
+
+        let content = "+++ Meta\nTI Form test\n+++\nThe next line is where the first form starts\n+++ Form\nThis form has all the different types of form fields in it\n[] Send:submit \\dest /one\n+++\nThen the second form\n+++ Form\nThis form has some funky fields with weird configurations to push the parser to its limits\n[] Send:submit \\dest /two\n";
+
+        let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
+
+        assert_eq!(document.build(), expected);
+    }
 }
 
 mod metadatabuilder_tests {

@@ -94,7 +94,7 @@ impl Window {
 
         // Render main section
         for line in document.main {
-            use crate::athn_document::MainLine::*;
+            use crate::athn_document::line_types::MainLine::*;
             match line {
                 TextLine(content) => {
                     let text_obj = Label::builder()
@@ -109,7 +109,7 @@ impl Window {
                         .label(content)
                         .halign(gtk::Align::Start)
                         .build();
-                    use crate::athn_document::Level::*;
+                    use crate::athn_document::line_types::Level::*;
                     let heading_class = match level {
                         One => "title-1",
                         Two => "title-2",

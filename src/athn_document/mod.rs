@@ -1,3 +1,8 @@
+pub mod form;
+use form::*;
+pub mod line_types;
+use line_types::*;
+
 #[derive(PartialEq, Debug)]
 pub struct Document {
     pub metadata: Metadata,
@@ -46,62 +51,80 @@ pub struct MetadataBuilder {
     cache: Option<u32>,
 }
 
-#[derive(PartialEq, Debug)]
-// A single line in the main section
-pub enum MainLine {
-    TextLine(String),
-    LinkLine(Link),
-    PreformattedLine(bool, String),
-    SeparatorLine,
-    UListLine(Level, String),
-    OListLine(Level, String, String),
-    DropdownLine(String, String),
-    AdmonitionLine(AdmonitionType, String),
-    HeadingLine(Level, String),
-    QuoteLine(String),
-}
-
-#[derive(PartialEq, Debug)]
-pub struct Link {
-    // The Link doesnt use a Url type for its url component because relative URLs are allowed, and we dont know the base URL yet, the URL will have to be parsed later when we know its base
-    pub url: String,
-    pub label: Option<String>,
-}
-
-#[derive(PartialEq, Debug)]
-pub enum HeaderLine {
-    LinkLine(Link),
-}
-
-#[derive(PartialEq, Debug)]
-pub enum FooterLine {
-    LinkLine(Link),
-    TextLine(String),
-}
-
-#[derive(PartialEq, Debug)]
-pub enum Level {
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-}
-
-#[derive(PartialEq, Debug)]
-pub enum AdmonitionType {
-    Note,
-    Warning,
-    Danger,
-}
-
 pub enum Section {
     Meta,
     Main,
     Form,
     Header,
     Footer,
+}
+
+pub fn parse(
+    mut line: std::str::Lines,
+    mut builder: DocumentBuilder,
+    current_section: Section,
+) -> Result<DocumentBuilder, &str> {
+    match line.next() {
+        // Reached the end of the document, we're done
+        None => Ok(builder),
+        Some(current_line) => {
+            // Ignore empty lines
+            if current_line.is_empty() {
+                return parse(line, builder, current_section);
+            };
+
+            // Change the section if a section line is encountered
+            if current_line.get(0..3).unwrap_or_default() == "+++" {
+                use Section::*;
+                match current_line {
+                    "+++ Meta" => return parse(line, builder, Meta),
+                    "+++ Header" => return parse(line, builder, Header),
+                    "+++ Footer" => return parse(line, builder, Footer),
+                    "+++ Form" => return parse(line, builder, Form),
+                    _ => return parse(line, builder, Main),
+                }
+            }
+
+            // Differentiate behavior based on the section
+            match current_section {
+                Section::Meta => {
+                    // split_at will panic if the line is shorter than 3 bytes, it's not valid
+                    // anyways if it is, so we can just Err if that happens
+                    if current_line.len() < 3 {
+                        return Err("Invalid Metadata tag line encountered (too short)");
+                    };
+                    builder.metadata = builder.metadata.parse(current_line)?;
+                    parse(line, builder, current_section)
+                }
+
+                Section::Main | Section::Form => parse(
+                    line,
+                    builder.add_main_line(MainLine::parse(current_line)?),
+                    current_section,
+                ),
+                Section::Header => match current_line.split_once("=> ") {
+                    None => Err("Invalid header line encountered"),
+                    Some((_, val)) => parse(
+                        line,
+                        builder.add_header_line(HeaderLine::LinkLine(Link::parse(val))),
+                        current_section,
+                    ),
+                },
+                Section::Footer => match current_line.split_once("=> ") {
+                    Some((_, val)) => parse(
+                        line,
+                        builder.add_footer_line(FooterLine::LinkLine(Link::parse(val))),
+                        current_section,
+                    ),
+                    None => parse(
+                        line,
+                        builder.add_footer_line(FooterLine::TextLine(current_line.to_string())),
+                        current_section,
+                    ),
+                },
+            }
+        }
+    }
 }
 
 impl MetadataBuilder {
@@ -209,182 +232,6 @@ impl DocumentBuilder {
             main: self.main,
             header: self.header,
             footer: self.footer,
-        }
-    }
-}
-
-pub fn parse(
-    mut line: std::str::Lines,
-    mut builder: DocumentBuilder,
-    current_section: Section,
-) -> Result<DocumentBuilder, &str> {
-    match line.next() {
-        // Reached the end of the document, we're done
-        None => Ok(builder),
-        Some(current_line) => {
-            // Ignore empty lines
-            if current_line.is_empty() {
-                return parse(line, builder, current_section);
-            };
-
-            // Change the section if a section line is encountered
-            if current_line.get(0..3).unwrap_or_default() == "+++" {
-                use Section::*;
-                match current_line {
-                    "+++ Meta" => return parse(line, builder, Meta),
-                    "+++ Header" => return parse(line, builder, Header),
-                    "+++ Footer" => return parse(line, builder, Footer),
-                    "+++ Form" => return parse(line, builder, Form),
-                    _ => return parse(line, builder, Main),
-                }
-            }
-
-            // Differentiate behavior based on the section
-            match current_section {
-                Section::Meta => {
-                    // split_at will panic if the line is shorter than 3 bytes, it's not valid
-                    // anyways if it is, so we can just Err if that happens
-                    if current_line.len() < 3 {
-                        return Err("Invalid Metadata tag line encountered (too short)");
-                    };
-                    builder.metadata = builder.metadata.parse(current_line)?;
-                    parse(line, builder, current_section)
-                }
-
-                Section::Main | Section::Form => {
-                    // split_at will panic if the line is shorter than 3 bytes, if it is we know
-                    // that the line is a text line
-                    if current_line.len() < 3 {
-                        return parse(
-                            line,
-                            builder.add_main_line(MainLine::TextLine(current_line.to_string())),
-                            current_section,
-                        );
-                    };
-                    // Call the MainLine parser on it
-                    parse(
-                        line,
-                        builder.add_main_line(MainLine::parse(current_line)?),
-                        current_section,
-                    )
-                }
-                Section::Header => match current_line.split_once("=> ") {
-                    None => Err("Invalid header line encountered"),
-                    Some((_, val)) => parse(
-                        line,
-                        builder.add_header_line(HeaderLine::LinkLine(Link::parse(val))),
-                        current_section,
-                    ),
-                },
-                Section::Footer => match current_line.split_once("=> ") {
-                    Some((_, val)) => parse(
-                        line,
-                        builder.add_footer_line(FooterLine::LinkLine(Link::parse(val))),
-                        current_section,
-                    ),
-                    None => parse(
-                        line,
-                        builder.add_footer_line(FooterLine::TextLine(current_line.to_string())),
-                        current_section,
-                    ),
-                },
-            }
-        }
-    }
-}
-
-impl MainLine {
-    fn parse(input: &str) -> Result<MainLine, &str> {
-        // Parses a string slice of a main line and returns the correct object.
-        // Panics if the input line is shorter than 3 bytes.
-        use Level::*;
-        use AdmonitionType::*;
-        use MainLine::*;
-        match input.split_at(3) {
-            ("=> ", val) => Ok(LinkLine(Link::parse(val))),
-            // Preformatted lines
-            ("```", val) => Ok(PreformattedLine(false, val.to_string())),
-            ("'''", val) => Ok(PreformattedLine(true, val.to_string())),
-            ("---", _) => Ok(SeparatorLine),
-            // Unordered lists
-            ("1* ", val) => Ok(UListLine(One, val.to_string())),
-            ("2* ", val) => Ok(UListLine(Two, val.to_string())),
-            ("3* ", val) => Ok(UListLine(Three, val.to_string())),
-            ("4* ", val) => Ok(UListLine(Four, val.to_string())),
-            ("5* ", val) => Ok(UListLine(Five, val.to_string())),
-            ("6* ", val) => Ok(UListLine(Six, val.to_string())),
-            // Ordered lists (need the split_by_separator function)
-            ("1- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(One, bullet.to_string(), content.to_string()))
-            }
-            ("2- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Two, bullet.to_string(), content.to_string()))
-            }
-            ("3- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Three, bullet.to_string(), content.to_string()))
-            }
-            ("4- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Four, bullet.to_string(), content.to_string()))
-            }
-            ("5- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Five, bullet.to_string(), content.to_string()))
-            }
-            ("6- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Six, bullet.to_string(), content.to_string()))
-            }
-            ("\\/ ", val) => {
-                let (label, content) = val
-                    .split_once(" | ")
-                    .ok_or("Dropdown line without ' | ' delimiter found")?;
-                Ok(DropdownLine(label.to_string(), content.to_string()))
-            }
-            // Admonitions
-            ("_! ", val) => Ok(AdmonitionLine(Note, val.to_string())),
-            ("*! ", val) => Ok(AdmonitionLine(Warning, val.to_string())),
-            ("!! ", val) => Ok(AdmonitionLine(Danger, val.to_string())),
-            // Headings
-            ("1# ", val) => Ok(HeadingLine(One, val.to_string())),
-            ("2# ", val) => Ok(HeadingLine(Two, val.to_string())),
-            ("3# ", val) => Ok(HeadingLine(Three, val.to_string())),
-            ("4# ", val) => Ok(HeadingLine(Four, val.to_string())),
-            ("5# ", val) => Ok(HeadingLine(Five, val.to_string())),
-            ("6# ", val) => Ok(HeadingLine(Six, val.to_string())),
-            (">> ", val) => Ok(QuoteLine(val.to_string())),
-            (_, _) => Ok(TextLine(input.to_string())),
-        }
-    }
-}
-
-impl Link {
-    fn parse(input: &str) -> Link {
-        // Takes the content of a link line and parses it into a Link object
-        match input.split_once(" ") {
-            Some((url, label)) => Link {
-                url: url.to_string(),
-                label: Some(label.to_string()),
-            },
-            None => Link {
-                url: input.to_string(),
-                label: None,
-            },
         }
     }
 }
