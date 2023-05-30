@@ -5,7 +5,7 @@ mod parse_tests {
     fn basic_example() {
         let expected = Document::builder().build();
 
-        let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++ Header\n=> /index.athn Homepage\n=> /about.athn About\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n#1 Heading 1\n#2 Heading 2\n#4 Heading 4\n>> I never said that  - Albert Einstein\n+++ Footer\nThis is just a boring old footer\n=> /privacy.athn Privacy policy";
+        let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++ Header\n=> /index.athn Homepage\n=> /about.athn About\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n_! Note admonition\n*! Warning admonition\n!! Danger admonition\n1# Heading 1\n2# Heading 2\n4# Heading 4\n>> I never said that  - Albert Einstein\n+++ Footer\nThis is just a boring old footer\n=> /privacy.athn Privacy policy";
 
         let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
 

@@ -56,6 +56,7 @@ pub enum MainLine {
     UListLine(Level, String),
     OListLine(Level, String, String),
     DropdownLine(String, String),
+    AdmonitionLine(AdmonitionType, String),
     HeadingLine(Level, String),
     QuoteLine(String),
 }
@@ -86,6 +87,13 @@ pub enum Level {
     Four,
     Five,
     Six,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum AdmonitionType {
+    Note,
+    Warning,
+    Danger,
 }
 
 pub enum Section {
@@ -290,6 +298,7 @@ impl MainLine {
         // Parses a string slice of a main line and returns the correct object.
         // Panics if the input line is shorter than 3 bytes.
         use Level::*;
+        use AdmonitionType::*;
         use MainLine::*;
         match input.split_at(3) {
             ("=> ", val) => Ok(LinkLine(Link::parse(val))),
@@ -347,13 +356,17 @@ impl MainLine {
                     .ok_or("Dropdown line without ' | ' delimiter found")?;
                 Ok(DropdownLine(label.to_string(), content.to_string()))
             }
+            // Admonitions
+            ("_! ", val) => Ok(AdmonitionLine(Note, val.to_string())),
+            ("*! ", val) => Ok(AdmonitionLine(Warning, val.to_string())),
+            ("!! ", val) => Ok(AdmonitionLine(Danger, val.to_string())),
             // Headings
-            ("#1 ", val) => Ok(HeadingLine(One, val.to_string())),
-            ("#2 ", val) => Ok(HeadingLine(Two, val.to_string())),
-            ("#3 ", val) => Ok(HeadingLine(Three, val.to_string())),
-            ("#4 ", val) => Ok(HeadingLine(Four, val.to_string())),
-            ("#5 ", val) => Ok(HeadingLine(Five, val.to_string())),
-            ("#6 ", val) => Ok(HeadingLine(Six, val.to_string())),
+            ("1# ", val) => Ok(HeadingLine(One, val.to_string())),
+            ("2# ", val) => Ok(HeadingLine(Two, val.to_string())),
+            ("3# ", val) => Ok(HeadingLine(Three, val.to_string())),
+            ("4# ", val) => Ok(HeadingLine(Four, val.to_string())),
+            ("5# ", val) => Ok(HeadingLine(Five, val.to_string())),
+            ("6# ", val) => Ok(HeadingLine(Six, val.to_string())),
             (">> ", val) => Ok(QuoteLine(val.to_string())),
             (_, _) => Ok(TextLine(input.to_string())),
         }
