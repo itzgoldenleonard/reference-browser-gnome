@@ -54,7 +54,7 @@ pub struct MetadataBuilder {
 #[derive(Default)]
 pub struct ParserState {
     current_section: Section,
-    form_count: i32,
+    form_count: u32,
 }
 
 #[derive(Default)]
@@ -82,7 +82,7 @@ pub fn parse(
             };
 
             // Change the section if a section line is encountered
-            if current_line.get(0..3).unwrap_or_default() == "+++" {
+            if current_line.starts_with("+++") {
                 use Section::*;
                 match current_line {
                     "+++ Meta" => return parse(line, builder, ParserState::default()),
@@ -141,11 +141,26 @@ pub fn parse(
                     parse(line, builder, state)
                 }
 
-                Section::Main | Section::Form => parse(
+                Section::Main => parse(
                     line,
                     builder.add_main_line(MainLine::parse(current_line)?),
                     state,
                 ),
+                Section::Form => match current_line.split_once("[] ") {
+                    Some((_, val)) => parse(
+                        line,
+                        builder.add_main_line(MainLine::FormFieldLine(
+                            state.form_count,
+                            FormField::parse(val)?,
+                        )),
+                        state,
+                    ),
+                    None => parse(
+                        line,
+                        builder.add_main_line(MainLine::parse(current_line)?),
+                        state,
+                    ),
+                },
                 Section::Header => match current_line.split_once("=> ") {
                     None => Err("Invalid header line encountered"),
                     Some((_, val)) => parse(
