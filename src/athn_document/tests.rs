@@ -7,7 +7,7 @@ mod parse_tests {
 
         let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++ Header\n=> /index.athn Homepage\n=> /about.athn About\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n_! Note admonition\n*! Warning admonition\n!! Danger admonition\n1# Heading 1\n2# Heading 2\n4# Heading 4\n>> I never said that  - Albert Einstein\n+++ Footer\nThis is just a boring old footer\n=> /privacy.athn Privacy policy";
 
-        let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
+        let document = parse(content.lines(), Document::builder(), ParserState::default()).unwrap();
 
         assert_ne!(document.build(), expected);
     }
@@ -18,7 +18,7 @@ mod parse_tests {
 
         let content = "+++ Meta\nTI Form test\n+++\nThe next line is where the first form starts\n+++ Form\nThis form has all the different types of form fields in it\n[] Send:submit \\dest /one\n+++\nThen the second form\n+++ Form\nThis form has some funky fields with weird configurations to push the parser to its limits\n[] Send:submit \\dest /two\n";
 
-        let document = parse(content.lines(), Document::builder(), Section::Main).unwrap();
+        let document = parse(content.lines(), Document::builder(), ParserState::default()).unwrap();
 
         assert_eq!(document.build(), expected);
     }

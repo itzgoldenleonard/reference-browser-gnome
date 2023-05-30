@@ -51,7 +51,15 @@ pub struct MetadataBuilder {
     cache: Option<u32>,
 }
 
+#[derive(Default)]
+pub struct ParserState {
+    current_section: Section,
+    form_count: i32,
+}
+
+#[derive(Default)]
 pub enum Section {
+    #[default]
     Meta,
     Main,
     Form,
@@ -62,7 +70,7 @@ pub enum Section {
 pub fn parse(
     mut line: std::str::Lines,
     mut builder: DocumentBuilder,
-    current_section: Section,
+    state: ParserState,
 ) -> Result<DocumentBuilder, &str> {
     match line.next() {
         // Reached the end of the document, we're done
@@ -70,23 +78,59 @@ pub fn parse(
         Some(current_line) => {
             // Ignore empty lines
             if current_line.is_empty() {
-                return parse(line, builder, current_section);
+                return parse(line, builder, state);
             };
 
             // Change the section if a section line is encountered
             if current_line.get(0..3).unwrap_or_default() == "+++" {
                 use Section::*;
                 match current_line {
-                    "+++ Meta" => return parse(line, builder, Meta),
-                    "+++ Header" => return parse(line, builder, Header),
-                    "+++ Footer" => return parse(line, builder, Footer),
-                    "+++ Form" => return parse(line, builder, Form),
-                    _ => return parse(line, builder, Main),
+                    "+++ Meta" => return parse(line, builder, ParserState::default()),
+                    "+++ Header" => {
+                        return parse(
+                            line,
+                            builder,
+                            ParserState {
+                                current_section: Header,
+                                ..state
+                            },
+                        )
+                    }
+                    "+++ Footer" => {
+                        return parse(
+                            line,
+                            builder,
+                            ParserState {
+                                current_section: Footer,
+                                ..state
+                            },
+                        )
+                    }
+                    "+++ Form" => {
+                        return parse(
+                            line,
+                            builder,
+                            ParserState {
+                                current_section: Form,
+                                form_count: state.form_count + 1,
+                            },
+                        )
+                    }
+                    _ => {
+                        return parse(
+                            line,
+                            builder,
+                            ParserState {
+                                current_section: Main,
+                                ..state
+                            },
+                        )
+                    }
                 }
             }
 
             // Differentiate behavior based on the section
-            match current_section {
+            match state.current_section {
                 Section::Meta => {
                     // split_at will panic if the line is shorter than 3 bytes, it's not valid
                     // anyways if it is, so we can just Err if that happens
@@ -94,32 +138,32 @@ pub fn parse(
                         return Err("Invalid Metadata tag line encountered (too short)");
                     };
                     builder.metadata = builder.metadata.parse(current_line)?;
-                    parse(line, builder, current_section)
+                    parse(line, builder, state)
                 }
 
                 Section::Main | Section::Form => parse(
                     line,
                     builder.add_main_line(MainLine::parse(current_line)?),
-                    current_section,
+                    state,
                 ),
                 Section::Header => match current_line.split_once("=> ") {
                     None => Err("Invalid header line encountered"),
                     Some((_, val)) => parse(
                         line,
                         builder.add_header_line(HeaderLine::LinkLine(Link::parse(val))),
-                        current_section,
+                        state,
                     ),
                 },
                 Section::Footer => match current_line.split_once("=> ") {
                     Some((_, val)) => parse(
                         line,
                         builder.add_footer_line(FooterLine::LinkLine(Link::parse(val))),
-                        current_section,
+                        state,
                     ),
                     None => parse(
                         line,
                         builder.add_footer_line(FooterLine::TextLine(current_line.to_string())),
-                        current_section,
+                        state,
                     ),
                 },
             }

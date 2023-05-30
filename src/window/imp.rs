@@ -1,4 +1,4 @@
-use crate::athn_document::{parse, Document, Section};
+use crate::athn_document::{parse, Document, ParserState};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
@@ -50,7 +50,7 @@ impl Window {
             .expect("Failed to make a request to the URL");
 
         // Extract and parse the athn document data from the Response and pass it to the render function
-        let document = parse(response.text().unwrap().as_str().lines(), Document::builder(), Section::Meta).unwrap().build();
+        let document = parse(response.text().unwrap().as_str().lines(), Document::builder(), ParserState::default()).unwrap().build();
         self.obj().render(document);
     }
 }
