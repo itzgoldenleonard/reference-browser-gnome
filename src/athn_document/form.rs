@@ -2,6 +2,7 @@
 pub enum FormField {
     Submit(ID, SubmitField),
     String(ID, StringField),
+    Integer(ID, IntField),
 }
 
 // Helper structs
@@ -66,6 +67,15 @@ pub struct StringField {
     pub allowed_variants: Option<Vec<String>>,
 }
 
+#[derive(PartialEq, Debug)]
+pub struct IntField {
+    pub global: GlobalProperties<i64>,
+    pub min: Option<i64>,
+    pub max: Option<i64>,
+    pub step: Option<i64>,
+    pub positive: bool,
+}
+
 impl FormField {
     pub fn parse(input: &str) -> Result<FormField, &str> {
         use FormField::*;
@@ -78,6 +88,8 @@ impl FormField {
             .split(" \\")
             .map(|property| property.split_once(" ").unwrap_or((property, "")))
             .collect();
+
+        let boolean_property = |name: &str| properties.iter().find(|e| e.0 == name).is_some();
 
         // Create an appropriate FormField based on the type found
         match field_type {
@@ -96,42 +108,71 @@ impl FormField {
                         .find(|e| e.0 == "label" || e.0 == "l")
                         .map(|e| e.1.to_string()),
 
-                    redirect: properties.iter().find(|e| e.0 == "redirect").is_some(),
+                    redirect: boolean_property("redirect"),
                 },
             )),
             "string" => Ok(String(
                 id,
                 StringField {
                     global: GlobalProperties::<std::string::String>::parse(&properties, |s| {
-                        s.to_string()
+                        Ok(s.to_string())
                     })?,
 
                     min: find_number_property(
                         &properties,
                         "min",
-                        "String type form field with anvalid min property value found",
+                        "String type form field with invalid min property value found",
                     )?,
 
                     max: find_number_property(
                         &properties,
                         "max",
-                        "String type form field with anvalid max property value found",
+                        "String type form field with invalid max property value found",
                     )?,
 
-                    multiline: properties.iter().find(|e| e.0 == "multiline").is_some(), 
-                    // TODO: Maybe it would be a good idea to have a function for this
-                    secret: properties.iter().find(|e| e.0 == "secret").is_some(),
+                    multiline: boolean_property("multiline"),
+                    secret: boolean_property("secret"),
 
-                    allowed_variants: match properties.iter().find(|e| e.0 == "e") {
-                        Some(_) => Some(
+                    allowed_variants: match boolean_property("e") {
+                        true => Some(
                             properties
                                 .iter()
                                 .filter(|e| e.0 == "e")
                                 .map(|e| e.1.to_string())
                                 .collect(),
                         ),
-                        None => None,
+                        false => None,
                     },
+                },
+            )),
+            "int" => Ok(Integer(
+                id,
+                IntField {
+                    global: GlobalProperties::<i64>::parse(&properties, |s| {
+                        Ok(s.parse().map_err(|_| {
+                            "Integer type form field with invalid default property found"
+                        })?)
+                    })?,
+
+                    min: find_number_property(
+                        &properties,
+                        "min",
+                        "Integer type form field with invalid min property value found",
+                    )?,
+
+                    max: find_number_property(
+                        &properties,
+                        "max",
+                        "Integer type form field with invalid max property value found",
+                    )?,
+
+                    step: find_number_property(
+                        &properties,
+                        "step",
+                        "Integer type form field with invalid step property value found",
+                    )?,
+
+                    positive: boolean_property("positive"),
                 },
             )),
             _ => Err("Form field with invalid type found"),
@@ -140,10 +181,10 @@ impl FormField {
 }
 
 impl<U> GlobalProperties<U> {
-    pub fn parse<T>(
+    pub fn parse<'a, T>(
         input: &Vec<(&str, &str)>,
-        converter: fn(&str) -> T,
-    ) -> Result<GlobalProperties<T>, &'static str> {
+        converter: fn(&str) -> Result<T, &'a str>,
+    ) -> Result<GlobalProperties<T>, &'a str> {
         Ok(GlobalProperties {
             optional: input
                 .iter()
@@ -158,7 +199,8 @@ impl<U> GlobalProperties<U> {
             default: input
                 .iter()
                 .find(|e| e.0 == "default" || e.0 == "d")
-                .map(|e| converter(e.1)),
+                .map(|e| Ok::<T, &str>(converter(e.1)?))
+                .transpose()?,
 
             conditional: input
                 .iter()
@@ -190,6 +232,64 @@ fn find_number_property<'a, F: std::str::FromStr>(
 mod tests {
     use super::*;
 
+    #[test]
+    fn basic_int_field() {
+        let expected = FormField::Integer(
+            ID::new("Test").unwrap(),
+            IntField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: None,
+                    default: None,
+                    conditional: None,
+                },
+                min: None,
+                max: Some(100),
+                step: None,
+                positive: false,
+            },
+        );
+
+        let line = "Test:int \\max 100";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn invalid_int_field() {
+        let line = "Test:int \\max 100 \\d 1o";
+
+        let form = FormField::parse(line);
+
+        assert!(form.is_err());
+    }
+
+    #[test]
+    fn advanced_int_field() {
+        let expected = FormField::Integer(
+            ID::new("int").unwrap(),
+            IntField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("This is a test".to_string()),
+                    default: Some(200),
+                    conditional: None,
+                },
+                min: Some(10),
+                max: Some(500),
+                step: Some(5),
+                positive: true,
+            },
+        );
+
+        let line = "int:int \\l This is a test \\positive \\min 10 \\max 500 \\d 200 \\step 5";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
     #[test]
     fn create_valid_id() {
         let valid_id = ID::new("valid_ID").unwrap();
