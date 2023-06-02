@@ -3,6 +3,10 @@ pub enum FormField {
     Submit(ID, SubmitField),
     String(ID, StringField),
     Integer(ID, IntField),
+    Float(ID, FloatField),
+    Boolean(ID, BoolField),
+    File(ID, FileField),
+    List(ID, ListField),
 }
 
 // Helper structs
@@ -74,6 +78,35 @@ pub struct IntField {
     pub max: Option<i64>,
     pub step: Option<i64>,
     pub positive: bool,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct FloatField {
+    pub global: GlobalProperties<f64>,
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub step: Option<f64>,
+    pub positive: bool,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct BoolField {
+    pub global: GlobalProperties<bool>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct FileField {
+    pub global: GlobalProperties<()>, // The file field cant have a default value
+    pub max: Option<u64>,
+    pub allowed_types: Option<Vec<String>>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct ListField {
+    pub global: GlobalProperties<u32>,
+    pub min: Option<u32>,
+    pub max: Option<u32>,
+    pub children: Option<Vec<ID>>,
 }
 
 impl FormField {
@@ -175,6 +208,110 @@ impl FormField {
                     positive: boolean_property("positive"),
                 },
             )),
+            "float" => Ok(Float(
+                id,
+                FloatField {
+                    global: GlobalProperties::<f64>::parse(&properties, |s| {
+                        Ok(s.parse().map_err(|_| {
+                            "Float type form field with invalid default property found"
+                        })?)
+                    })?,
+
+                    min: find_number_property(
+                        &properties,
+                        "min",
+                        "Float type form field with invalid min property value found",
+                    )?,
+
+                    max: find_number_property(
+                        &properties,
+                        "max",
+                        "Float type form field with invalid max property value found",
+                    )?,
+
+                    step: find_number_property(
+                        &properties,
+                        "step",
+                        "Float type form field with invalid step property value found",
+                    )?,
+
+                    positive: boolean_property("positive"),
+                },
+            )),
+            "bool" => Ok(Boolean(
+                id,
+                BoolField {
+                    global: GlobalProperties::<bool>::parse(&properties, |s| {
+                        Ok(s.parse().map_err(|_| {
+                            "Bool type form field with invalid default property found"
+                        })?)
+                    })?,
+                },
+            )),
+            "file" => Ok(File(
+                id,
+                FileField {
+                    global: GlobalProperties::<()>::parse(&properties, |_| {
+                        Err("File type form field with default property found")
+                    })?,
+
+                    max: find_number_property(
+                        &properties,
+                        "max",
+                        "File type form field with invalid max property value found",
+                    )?,
+
+                    allowed_types: match boolean_property("type") {
+                        true => Some(
+                            properties
+                                .iter()
+                                .filter(|e| e.0 == "type")
+                                .map(|e| e.1.to_string())
+                                .collect(),
+                        ),
+                        false => None,
+                    },
+                },
+            )),
+            "list" => Ok(List(
+                id,
+                ListField {
+                    global: GlobalProperties::<u32>::parse(&properties, |s| {
+                        Ok(s.parse().map_err(|_| {
+                            "List type form field with invalid default property found"
+                        })?)
+                    })?,
+
+                    min: find_number_property(
+                        &properties,
+                        "min",
+                        "List type form field with invalid min property value found",
+                    )?,
+
+                    max: find_number_property(
+                        &properties,
+                        "max",
+                        "List type form field with invalid max property value found",
+                    )?,
+
+                    children: match boolean_property("child") {
+                        true => {
+                            let ids_result = properties
+                                .iter()
+                                .filter(|e| e.0 == "child")
+                                .map(|e| ID::new(e.1));
+
+                            if ids_result.clone().find(|e| e.is_err()).is_some() {
+                                return Err("List field with invalid child ID found");
+                            };
+                            // This unwrap is safe because I just checked that all elements in the
+                            // vector are Ok(ID)
+                            Some(ids_result.map(|e| e.unwrap()).collect()) 
+                        }
+                        false => None,
+                    },
+                },
+            )),
             _ => Err("Form field with invalid type found"),
         }
     }
@@ -231,6 +368,158 @@ fn find_number_property<'a, F: std::str::FromStr>(
 
 mod tests {
     use super::*;
+
+    #[test]
+    fn basic_file_field() {
+        let expected = FormField::File(
+            ID::new("test").unwrap(),
+            FileField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("This is a test".to_string()),
+                    default: None,
+                    conditional: None,
+                },
+                max: Some(500000),
+                allowed_types: None,
+            },
+        );
+
+        let line = "test:file \\l This is a test \\max 500000";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn enum_file_field() {
+        let expected = FormField::File(
+            ID::new("file").unwrap(),
+            FileField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("This is a test".to_string()),
+                    default: None,
+                    conditional: None,
+                },
+                max: None,
+                allowed_types: Some(vec![
+                    "image/jpg".to_string(),
+                    "image/png".to_string(),
+                    "image/webp".to_string(),
+                ]),
+            },
+        );
+
+        let line =
+            "file:file \\l This is a test \\type image/jpg \\type image/png \\type image/webp";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn boolean_field() {
+        let expected = FormField::Boolean(
+            ID::new("Test").unwrap(),
+            BoolField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("Boolean field".to_string()),
+                    default: Some(true),
+                    conditional: None,
+                },
+            },
+        );
+
+        let line = "Test:bool \\label Boolean field \\default true";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn optional_boolean_field() {
+        let expected = FormField::Boolean(
+            ID::new("Test").unwrap(),
+            BoolField {
+                global: GlobalProperties {
+                    optional: true,
+                    label: None,
+                    default: None,
+                    conditional: None,
+                },
+            },
+        );
+
+        let line = "Test:bool \\?";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn basic_float_field() {
+        let expected = FormField::Float(
+            ID::new("Test").unwrap(),
+            FloatField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: None,
+                    default: None,
+                    conditional: None,
+                },
+                min: None,
+                max: Some(100.5),
+                step: None,
+                positive: false,
+            },
+        );
+
+        let line = "Test:float \\max 100.5";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn invalid_float_field() {
+        let line = "Test:float \\max 100 \\d 1o";
+
+        let form = FormField::parse(line);
+
+        assert!(form.is_err());
+    }
+
+    #[test]
+    fn advanced_float_field() {
+        let expected = FormField::Float(
+            ID::new("float").unwrap(),
+            FloatField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("This is a test".to_string()),
+                    default: Some(2000000.0),
+                    conditional: None,
+                },
+                min: Some(10.0),
+                max: Some(5000000.0),
+                step: Some(0.5),
+                positive: true,
+            },
+        );
+
+        let line = "float:float \\l This is a test \\positive \\min 10 \\max 5000000 \\d 2000000.0 \\step 0.5";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
 
     #[test]
     fn basic_int_field() {
@@ -290,6 +579,7 @@ mod tests {
 
         assert_eq!(form, expected);
     }
+
     #[test]
     fn create_valid_id() {
         let valid_id = ID::new("valid_ID").unwrap();

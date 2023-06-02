@@ -17,7 +17,7 @@ mod parse_tests {
         let expected = Document::builder().build();
 
         // 
-        let content = "+++ Meta\nTI Form test\n+++\nThe next line is where the first form starts\n+++ Form\nThis form has all the different types of form fields in it\n[] string:string \\optional \\default Hello world!\n[] int:int \\max 1000 \\d 1 \\step 2 \\positive\n[] Send:submit \\dest /one\n+++\n[] This is not a form field because it isnt in a form section\nThen the second form\n+++ Form\n \nThis form has some funky fields with weird configurations to push the parser to its limits\n[] Send:submit \\dest /two\n";
+        let content = "+++ Meta\nTI Form test\n+++\nThe next line is where the first form starts\n+++ Form\nThis form has all the different types of form fields in it\n[] string:string \\optional \\default Hello world!\n[] int:int \\max 1000 \\d 1 \\step 2 \\positive\n[] float:float \\max 1000.0 \\min -1000.0\n[] bool:bool \\l Gotta test out the label functionality\n[] file:file \\max 1000000 \\type image/*\n[] list:list \\child date \\child email \\label The next two fields are gonna be in the list \\max 4 \\d 2\n[] Send:submit \\dest /one\n+++\n[] This is not a form field because it isnt in a form section\nThen the second form\n+++ Form\n \nThis form has some funky fields with weird configurations to push the parser to its limits\n[] Send:submit \\dest /two\n";
 
         let document = parse(content.lines(), Document::builder(), ParserState::default()).unwrap();
 
