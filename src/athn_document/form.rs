@@ -1,3 +1,6 @@
+use email_address::EmailAddress;
+use std::time::SystemTime;
+
 #[derive(PartialEq, Debug)]
 pub enum FormField {
     Submit(ID, SubmitField),
@@ -7,6 +10,9 @@ pub enum FormField {
     Boolean(ID, BoolField),
     File(ID, FileField),
     List(ID, ListField),
+    Date(ID, DateField),
+    Email(ID, EmailField),
+    Phone(ID, TelField),
 }
 
 // Helper structs
@@ -107,6 +113,26 @@ pub struct ListField {
     pub min: Option<u32>,
     pub max: Option<u32>,
     pub children: Option<Vec<ID>>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct DateField {
+    pub global: GlobalProperties<SystemTime>,
+    pub min: Option<SystemTime>,
+    pub max: Option<SystemTime>,
+    pub time: bool,
+    pub date: bool,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct EmailField {
+    pub global: GlobalProperties<EmailAddress>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct TelField {
+    // The phone number isnt verified because I couldnt find a standard to verify against
+    pub global: GlobalProperties<String>,
 }
 
 impl FormField {
@@ -306,10 +332,69 @@ impl FormField {
                             };
                             // This unwrap is safe because I just checked that all elements in the
                             // vector are Ok(ID)
-                            Some(ids_result.map(|e| e.unwrap()).collect()) 
+                            Some(ids_result.map(|e| e.unwrap()).collect())
                         }
                         false => None,
                     },
+                },
+            )),
+            "date" => Ok(Date(
+                id,
+                DateField {
+                    global: GlobalProperties::<SystemTime>::parse(&properties, |s| match s {
+                        "now" => Ok(SystemTime::now()),
+                        val => val
+                            .parse::<humantime::Timestamp>()
+                            .map(|ts| ts.into())
+                            .map_err(|_| {
+                                "Date type form field with invalid default property found"
+                            }),
+                    })?,
+
+                    min: properties
+                        .iter()
+                        .find(|e| e.0 == "min")
+                        .map(|e| match e.1 {
+                            "now" => Ok(SystemTime::now()),
+                            val => val.parse::<humantime::Timestamp>().map(|ts| ts.into()),
+                        })
+                        .transpose()
+                        .map_err(|_| {
+                            "Date type form field with invalid min property value found"
+                        })?,
+
+                    max: properties
+                        .iter()
+                        .find(|e| e.0 == "max")
+                        .map(|e| match e.1 {
+                            "now" => Ok(SystemTime::now()),
+                            val => val.parse::<humantime::Timestamp>().map(|ts| ts.into()),
+                        })
+                        .transpose()
+                        .map_err(|_| {
+                            "Date type form field with invalid max property value found"
+                        })?,
+
+                    date: boolean_property("date"),
+                    time: boolean_property("time"),
+                },
+            )),
+            "email" => Ok(Email(
+                id,
+                EmailField {
+                    global: GlobalProperties::<EmailAddress>::parse(&properties, |s| {
+                        Ok(s.parse().map_err(|_| {
+                            "Email type form field with invalid default property found"
+                        })?)
+                    })?,
+                },
+            )),
+            "tel" => Ok(Phone(
+                id,
+                TelField {
+                    global: GlobalProperties::<std::string::String>::parse(&properties, |s| {
+                        Ok(s.to_string())
+                    })?,
                 },
             )),
             _ => Err("Form field with invalid type found"),
@@ -368,6 +453,185 @@ fn find_number_property<'a, F: std::str::FromStr>(
 
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_tel_field() {
+        let expected = FormField::Phone(
+            ID::new("test").unwrap(),
+            TelField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: None,
+                    default: Some(String::from("+44 113 496 0000")),
+                    conditional: None,
+                },
+            },
+        );
+
+        let line = "test:tel \\d +44 113 496 0000";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn basic_tel_field() {
+        let expected = FormField::Phone(
+            ID::new("test").unwrap(),
+            TelField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("This is a test".to_string()),
+                    default: None,
+                    conditional: None,
+                },
+            },
+        );
+
+        let line = "test:tel \\l This is a test";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn invalid_email_field() {
+        let line = "Test:email \\d invalid.email";
+
+        let form = FormField::parse(line);
+
+        assert!(form.is_err());
+    }
+
+    #[test]
+    fn default_email_field() {
+        let expected = FormField::Email(
+            ID::new("test").unwrap(),
+            EmailField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: None,
+                    default: Some("foo@example.com".parse().unwrap()),
+                    conditional: None,
+                },
+            },
+        );
+
+        let line = "test:email \\d foo@example.com";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn basic_email_field() {
+        let expected = FormField::Email(
+            ID::new("test").unwrap(),
+            EmailField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("This is a test".to_string()),
+                    default: None,
+                    conditional: None,
+                },
+            },
+        );
+
+        let line = "test:email \\l This is a test";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn default_date_field() {
+        let expected = FormField::Date(
+            ID::new("test").unwrap(),
+            DateField {
+                global: GlobalProperties {
+                    optional: true,
+                    label: None,
+                    default: Some(
+                        "2023-04-10T12:00:00"
+                            .parse::<humantime::Timestamp>()
+                            .unwrap()
+                            .into(),
+                    ),
+                    conditional: None,
+                },
+                min: None,
+                max: None,
+                time: false,
+                date: false,
+            },
+        );
+
+        let line = "test:date \\? \\d 2023-04-10T12:00:00";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn now_date_field() {
+        // This test is gonna fail because it takes ~15us to parse the line I dunno how to fix it
+        let expected = FormField::Date(
+            ID::new("test").unwrap(),
+            DateField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: Some("This is a test".to_string()),
+                    default: None,
+                    conditional: None,
+                },
+                min: Some(SystemTime::now()),
+                max: None,
+                time: false,
+                date: false,
+            },
+        );
+
+        let line = "test:date \\min now \\l This is a test";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
+
+    #[test]
+    fn basic_date_field() {
+        let expected = FormField::Date(
+            ID::new("test").unwrap(),
+            DateField {
+                global: GlobalProperties {
+                    optional: false,
+                    label: None,
+                    default: None,
+                    conditional: None,
+                },
+                min: Some(
+                    "2023-06-01T00:00:00"
+                        .parse::<humantime::Timestamp>()
+                        .unwrap()
+                        .into(),
+                ),
+                max: None,
+                time: false,
+                date: false,
+            },
+        );
+
+        let line = "test:date \\min 2023-06-01T00:00:00";
+
+        let form = FormField::parse(line).unwrap();
+
+        assert_eq!(form, expected);
+    }
 
     #[test]
     fn basic_file_field() {
