@@ -85,7 +85,6 @@ pub fn parse(
             if current_line.starts_with("+++") {
                 use Section::*;
                 match current_line {
-                    "+++ Meta" => return parse(line, builder, ParserState::default()),
                     "+++ Header" => {
                         return parse(
                             line,
@@ -146,7 +145,7 @@ pub fn parse(
                     builder.add_main_line(MainLine::parse(current_line)?),
                     state,
                 ),
-                Section::Form => match current_line.split_once("[] ") {
+                Section::Form => match current_line.split_once("???") {
                     Some((_, val)) => parse(
                         line,
                         builder.add_main_line(MainLine::FormFieldLine(
@@ -161,18 +160,18 @@ pub fn parse(
                         state,
                     ),
                 },
-                Section::Header => match current_line.split_once("=> ") {
+                Section::Header => match current_line.split_once("@@@") {
                     None => Err("Invalid header line encountered"),
                     Some((_, val)) => parse(
                         line,
-                        builder.add_header_line(HeaderLine::LinkLine(Link::parse(val))),
+                        builder.add_header_line(HeaderLine::LinkLine(val.into())),
                         state,
                     ),
                 },
-                Section::Footer => match current_line.split_once("=> ") {
+                Section::Footer => match current_line.split_once("@@@") {
                     Some((_, val)) => parse(
                         line,
-                        builder.add_footer_line(FooterLine::LinkLine(Link::parse(val))),
+                        builder.add_footer_line(FooterLine::LinkLine(val.into())),
                         state,
                     ),
                     None => parse(
@@ -248,12 +247,12 @@ impl MetadataBuilder {
         // Parses a metadata line and returns a builder with the corresponding changes applied to
         // it. Panics if the input line is shorter than 3 bytes.
         match line.split_at(3) {
-            ("TI ", val) => Ok(self.title(val.to_string())),
-            ("ST ", val) => Ok(self.subtitle(val.to_string())),
-            ("AU ", val) => Ok(self.add_author_unfailing(val.to_string())),
-            ("LI ", val) => Ok(self.add_license_unfailing(val.to_string())),
-            ("LA ", val) => Ok(self.add_language_unfailing(val.to_string())),
-            ("CH ", val) => Ok(self.cache(val.parse().map_err(|_| "Invalid cache tag value")?)),
+            ("TM ", val) => Ok(self.title(val.to_string())),
+            ("SM ", val) => Ok(self.subtitle(val.to_string())),
+            ("AM ", val) => Ok(self.add_author_unfailing(val.to_string())),
+            ("RM ", val) => Ok(self.add_license_unfailing(val.to_string())),
+            ("LM ", val) => Ok(self.add_language_unfailing(val.to_string())),
+            ("CM ", val) => Ok(self.cache(val.parse().map_err(|_| "Invalid cache tag value")?)),
             (_, _) => Err("Invalid Metadata tag line encountered"),
         }
     }

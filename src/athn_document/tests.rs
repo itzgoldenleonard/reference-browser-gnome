@@ -5,19 +5,18 @@ mod parse_tests {
     fn basic_example() {
         let expected = Document::builder().build();
 
-        let content = "\n+++ Meta\nTI Test\nST Subtitle test\nAU Author 1\nAU Author 2\nLI CC0-1.0\nLA en\nCH 0\n+++ Header\n=> /index.athn Homepage\n=> /about.athn About\n+++\n\n()\nLittle text line makes the test fail\n=> https://example.com/ Link line with label, the next one will be without\n=> https://localhost/\n```Preformatted line\n'''Textual preformatted line\n---\n1* Unordered list\n2* Subitem\n6* Subsubsubsubsubitem\n1- 1. Ordered list\n1- 2. With multiple lines\n2- a) And subitems\n\\/ Dropdown | This is a dropdown line\n_! Note admonition\n*! Warning admonition\n!! Danger admonition\n1# Heading 1\n2# Heading 2\n4# Heading 4\n>> I never said that  - Albert Einstein\n+++ Footer\nThis is just a boring old footer\n=> /privacy.athn Privacy policy";
+        let content = "\nTM Test\nSM Subtitle test\nAM Author 1\nAM Author 2\nRM CC0-1.0\nLM en\nCM 0\n+++ Header\n@@@/index.athn | Homepage\n@@@/about.athn | About\n+++\n\n()\nLittle text line makes the test fail\n@@@https://example.com/ | Link line with label, the next one will be without\n@@@https://localhost/\n;;;Preformatted line\n'''Textual preformatted line\n===\n1- Unordered list\n2- Subitem\n6- Subsubsubsubsubitem\n1* 1. | Ordered list\n1* 2. | With multiple lines\n2* a) | And subitems\n...Dropdown | This is a dropdown line\n_! Note admonition\n*! Warning admonition\n!! Danger admonition\n1# Heading 1\n2# Heading 2\n4# Heading 4\n///I never said that  - Albert Einstein\n+++ Footer\nThis is just a boring old footer\n@@@/privacy.athn | Privacy policy";
 
         let document = parse(content.lines(), Document::builder(), ParserState::default()).unwrap();
 
-        assert_ne!(document.build(), expected);
+        assert_eq!(document.build(), expected);
     }
 
     #[test]
     fn form() {
         let expected = Document::builder().build();
 
-        // 
-        let content = "+++ Meta\nTI Form test\n+++\nThe next line is where the first form starts\n+++ Form\nThis form has all the different types of form fields in it\n[] string:string \\optional \\default Hello world!\n[] int:int \\max 1000 \\d 1 \\step 2 \\positive\n[] float:float \\max 1000.0 \\min -1000.0\n[] bool:bool \\l Gotta test out the label functionality\n[] file:file \\max 1000000 \\type image/*\n[] list:list \\child date \\child email \\label The next two fields are gonna be in the list \\max 4 \\d 2\n[] date:date \\default now\n[] email:email \\? \\label You dont *have to* subscribe\n[] phone:tel \\?\n[] Send:submit \\dest /one\n+++\n[] This is not a form field because it isnt in a form section\nThen the second form\n+++ Form\n \nThis form has some funky fields with weird configurations to push the parser to its limits\n[] Send:submit \\dest /two\n";
+        let content = "\nTM Form test\n+++\nThe next line is where the first form starts\n+++ Form\nThis form has all the different types of form fields in it\n???string:string \\optional \\default Hello world!\n???int:int \\max 1000 \\default 1 \\step 2 \\positive\n???float:float \\max 1000.0 \\min -1000.0\n???bool:bool \\label Gotta test out the label functionality\n???file:file \\max 1000000 \\type image/*\n???list:list \\child date \\child email \\label The next two fields are gonna be in the list \\max 4 \\default 2\n???date:date \\default now\n???email:email \\optional \\label You dont *have to* subscribe\n???phone:tel \\optional\n???Send:submit \\destination /one\n+++\n???This is not a form field because it isnt in a form section\nThen the second form\n+++ Form\n \nThis form has some funky fields with weird configurations to push the parser to its limits\n???Send:submit \\destination /two\n";
 
         let document = parse(content.lines(), Document::builder(), ParserState::default()).unwrap();
 

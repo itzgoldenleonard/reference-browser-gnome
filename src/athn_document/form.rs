@@ -132,6 +132,10 @@ pub struct EmailField {
 #[derive(PartialEq, Debug)]
 pub struct TelField {
     // The phone number isnt verified because I couldnt find a standard to verify against
+    // https://crates.io/crates/phonenumber
+    // https://docs.rs/phonenumber/0.3.2+8.13.9/phonenumber/#reexports
+    // https://www.twilio.com/docs/glossary/what-e164
+    // https://www.twilio.com/blog/international-phone-number-input-html-javascript
     pub global: GlobalProperties<String>,
 }
 
@@ -468,7 +472,7 @@ mod tests {
             },
         );
 
-        let line = "test:tel \\d +44 113 496 0000";
+        let line = "test:tel \\default +44 113 496 0000";
 
         let form = FormField::parse(line).unwrap();
 
@@ -489,7 +493,7 @@ mod tests {
             },
         );
 
-        let line = "test:tel \\l This is a test";
+        let line = "test:tel \\label This is a test";
 
         let form = FormField::parse(line).unwrap();
 
@@ -498,7 +502,7 @@ mod tests {
 
     #[test]
     fn invalid_email_field() {
-        let line = "Test:email \\d invalid.email";
+        let line = "Test:email \\default invalid.email";
 
         let form = FormField::parse(line);
 
@@ -519,7 +523,7 @@ mod tests {
             },
         );
 
-        let line = "test:email \\d foo@example.com";
+        let line = "test:email \\default foo@example.com";
 
         let form = FormField::parse(line).unwrap();
 
@@ -540,7 +544,7 @@ mod tests {
             },
         );
 
-        let line = "test:email \\l This is a test";
+        let line = "test:email \\label This is a test";
 
         let form = FormField::parse(line).unwrap();
 
@@ -570,7 +574,7 @@ mod tests {
             },
         );
 
-        let line = "test:date \\? \\d 2023-04-10T12:00:00";
+        let line = "test:date \\optional \\default 2023-04-10T12:00:00";
 
         let form = FormField::parse(line).unwrap();
 
@@ -596,7 +600,7 @@ mod tests {
             },
         );
 
-        let line = "test:date \\min now \\l This is a test";
+        let line = "test:date \\min now \\label This is a test";
 
         let form = FormField::parse(line).unwrap();
 
@@ -649,7 +653,7 @@ mod tests {
             },
         );
 
-        let line = "test:file \\l This is a test \\max 500000";
+        let line = "test:file \\label This is a test \\max 500000";
 
         let form = FormField::parse(line).unwrap();
 
@@ -677,7 +681,7 @@ mod tests {
         );
 
         let line =
-            "file:file \\l This is a test \\type image/jpg \\type image/png \\type image/webp";
+            "file:file \\label This is a test \\type image/jpg \\type image/png \\type image/webp";
 
         let form = FormField::parse(line).unwrap();
 
@@ -719,7 +723,7 @@ mod tests {
             },
         );
 
-        let line = "Test:bool \\?";
+        let line = "Test:bool \\optional";
 
         let form = FormField::parse(line).unwrap();
 
@@ -753,7 +757,7 @@ mod tests {
 
     #[test]
     fn invalid_float_field() {
-        let line = "Test:float \\max 100 \\d 1o";
+        let line = "Test:float \\max 100 \\default 1o";
 
         let form = FormField::parse(line);
 
@@ -778,7 +782,7 @@ mod tests {
             },
         );
 
-        let line = "float:float \\l This is a test \\positive \\min 10 \\max 5000000 \\d 2000000.0 \\step 0.5";
+        let line = "float:float \\label This is a test \\positive \\min 10 \\max 5000000 \\default 2000000.0 \\step 0.5";
 
         let form = FormField::parse(line).unwrap();
 
@@ -812,7 +816,7 @@ mod tests {
 
     #[test]
     fn invalid_int_field() {
-        let line = "Test:int \\max 100 \\d 1o";
+        let line = "Test:int \\max 100 \\default 1o";
 
         let form = FormField::parse(line);
 
@@ -837,7 +841,7 @@ mod tests {
             },
         );
 
-        let line = "int:int \\l This is a test \\positive \\min 10 \\max 500 \\d 200 \\step 5";
+        let line = "int:int \\label This is a test \\positive \\min 10 \\max 500 \\default 200 \\step 5";
 
         let form = FormField::parse(line).unwrap();
 
@@ -875,7 +879,7 @@ mod tests {
             },
         );
 
-        let line = "string:string \\l This is a test";
+        let line = "string:string \\label This is a test";
 
         let form = FormField::parse(line).unwrap();
 
@@ -905,7 +909,7 @@ mod tests {
         );
 
         let line =
-            "string:string \\l This is a test \\multiline \\min 10 \\max 500 \\d Fill me out \\!c other_id";
+            "string:string \\label This is a test \\multiline \\min 10 \\max 500 \\default Fill me out \\!conditional other_id";
 
         let form = FormField::parse(line).unwrap();
 
@@ -935,22 +939,11 @@ mod tests {
             },
         );
 
-        let line = "string:string \\l This is a test \\e Variant 1 \\e Variant 2 \\e Variant 3";
+        let line = "string:string \\label This is a test \\variant Variant 1 \\variant Variant 2 \\variant Variant 3";
 
         let form = FormField::parse(line).unwrap();
 
         assert_eq!(form, expected);
-    }
-
-    #[test]
-    fn label_shorthand() {
-        let line1 = "Send:submit \\dest /destination \\label Test";
-        let line2 = "Send:submit \\dest /destination \\l Test";
-
-        let form1 = FormField::parse(line1).unwrap();
-        let form2 = FormField::parse(line2).unwrap();
-
-        assert_eq!(form1, form2);
     }
 
     #[test]
@@ -964,7 +957,7 @@ mod tests {
             },
         );
 
-        let line = "Send:submit \\dest /destination";
+        let line = "Send:submit \\destination /destination";
 
         let document = FormField::parse(line).unwrap();
 
@@ -982,7 +975,7 @@ mod tests {
             },
         );
 
-        let line = "Send:submit \\dest /destination \\redirect";
+        let line = "Send:submit \\destination /destination \\redirect";
 
         let document = FormField::parse(line).unwrap();
 
@@ -1000,7 +993,7 @@ mod tests {
             },
         );
 
-        let line = "Send:submit \\dest /destination \\redirect \\label Click here to submit";
+        let line = "Send:submit \\destination /destination \\redirect \\label Click here to submit";
 
         let document = FormField::parse(line).unwrap();
 

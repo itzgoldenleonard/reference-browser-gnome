@@ -42,6 +42,21 @@ pub enum Level {
     Six,
 }
 
+impl TryFrom<u8> for Level {
+    type Error = &'static str;
+    fn try_from(b: u8) -> Result<Self, Self::Error> {
+        match b {
+            0x31 => Ok(Self::One),
+            0x32 => Ok(Self::Two),
+            0x33 => Ok(Self::Three),
+            0x34 => Ok(Self::Four),
+            0x35 => Ok(Self::Five),
+            0x36 => Ok(Self::Six),
+            _ => Err("Level unable to be constructed from given byte"),
+        }
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub enum AdmonitionType {
     Note,
@@ -49,102 +64,221 @@ pub enum AdmonitionType {
     Danger,
 }
 
-impl Link {
-    pub fn parse(input: &str) -> Link {
-        // Takes the content of a link line and parses it into a Link object
-        match input.split_once(" ") {
-            Some((url, label)) => Link {
-                url: url.to_string(),
-                label: Some(label.to_string()),
-            },
-            None => Link {
-                url: input.to_string(),
-                label: None,
-            },
+impl TryFrom<u8> for AdmonitionType {
+    type Error = &'static str;
+    fn try_from(b: u8) -> Result<Self, Self::Error> {
+        match b {
+            0x5f => Ok(Self::Note),
+            0x2a => Ok(Self::Warning),
+            0x21 => Ok(Self::Danger),
+            _ => Err("AdmonitionType unable to be constructed from given byte"),
         }
     }
+}
+
+impl From<&str> for Link {
+    fn from(input: &str) -> Self {
+        // Takes the content of a link line and parses it into a Link object
+        let (url, label) =
+            split_delimited(input).map_or_else(|_| (input.into(), None), |v| (v.0, Some(v.1)));
+        Self { url, label }
+    }
+}
+
+fn split_delimited(input: &str) -> Result<(String, String), &str> {
+    use tuple::Map;
+    Ok(input
+        .split_once(" | ")
+        .ok_or("Incorrectly delimited line encountered")?
+        .map(|e| e.into()))
 }
 
 impl MainLine {
     pub fn parse(input: &str) -> Result<MainLine, &str> {
         // Parses a string slice of a main line and returns the correct object.
-        use AdmonitionType::*;
-        use Level::*;
         use MainLine::*;
 
-        if input.len() < 3 {
-            return Ok(TextLine(input.to_string()));
-        };
+        let text_line = || Ok(TextLine(input.into()));
 
-        match input.split_at(3) {
-            ("=> ", val) => Ok(LinkLine(Link::parse(val))),
-            // Preformatted lines
-            ("```", val) => Ok(PreformattedLine(false, val.to_string())),
-            ("'''", val) => Ok(PreformattedLine(true, val.to_string())),
-            ("---", _) => Ok(SeparatorLine),
-            // Unordered lists
-            ("1* ", val) => Ok(UListLine(One, val.to_string())),
-            ("2* ", val) => Ok(UListLine(Two, val.to_string())),
-            ("3* ", val) => Ok(UListLine(Three, val.to_string())),
-            ("4* ", val) => Ok(UListLine(Four, val.to_string())),
-            ("5* ", val) => Ok(UListLine(Five, val.to_string())),
-            ("6* ", val) => Ok(UListLine(Six, val.to_string())),
-            // Ordered lists (need the split_by_separator function)
-            ("1- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(One, bullet.to_string(), content.to_string()))
+        let lti: Vec<u8> = input.bytes().take(3).collect();
+        if lti.len() < 3 {
+            return text_line();
+        };
+        let content = input.get(3..).unwrap_or_default();
+
+        // If it ends with space
+        if lti[2] == 0x20 {
+            match lti[1] {
+                0x2d => Ok(UListLine(lti[0].try_into()?, content.into())),
+                0x2a => Ok(OListLine(
+                    lti[0].try_into()?,
+                    split_delimited(content)?.0,
+                    split_delimited(content)?.1,
+                )),
+                0x21 => Ok(AdmonitionLine(lti[0].try_into()?, content.into())),
+                0x23 => Ok(HeadingLine(lti[0].try_into()?, content.into())),
+                _ => text_line(),
             }
-            ("2- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Two, bullet.to_string(), content.to_string()))
+        } else {
+            if lti[0] != lti[1] || lti[1] != lti[2] {
+                return text_line();
+            };
+            match lti[0] {
+                0x40 => Ok(LinkLine(content.into())),
+                0x3b => Ok(PreformattedLine(false, content.into())),
+                0x27 => Ok(PreformattedLine(true, content.into())),
+                0x3d => Ok(SeparatorLine),
+                0x2e => Ok(DropdownLine(
+                    split_delimited(content)?.0,
+                    split_delimited(content)?.1,
+                )),
+                0x2f => Ok(QuoteLine(content.into())),
+                _ => text_line(),
             }
-            ("3- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Three, bullet.to_string(), content.to_string()))
-            }
-            ("4- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Four, bullet.to_string(), content.to_string()))
-            }
-            ("5- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Five, bullet.to_string(), content.to_string()))
-            }
-            ("6- ", val) => {
-                let (bullet, content) = val
-                    .split_once(" ")
-                    .ok_or("Invalid ordered list line found")?;
-                Ok(OListLine(Six, bullet.to_string(), content.to_string()))
-            }
-            ("\\/ ", val) => {
-                let (label, content) = val
-                    .split_once(" | ")
-                    .ok_or("Dropdown line without ' | ' delimiter found")?;
-                Ok(DropdownLine(label.to_string(), content.to_string()))
-            }
-            // Admonitions
-            ("_! ", val) => Ok(AdmonitionLine(Note, val.to_string())),
-            ("*! ", val) => Ok(AdmonitionLine(Warning, val.to_string())),
-            ("!! ", val) => Ok(AdmonitionLine(Danger, val.to_string())),
-            // Headings
-            ("1# ", val) => Ok(HeadingLine(One, val.to_string())),
-            ("2# ", val) => Ok(HeadingLine(Two, val.to_string())),
-            ("3# ", val) => Ok(HeadingLine(Three, val.to_string())),
-            ("4# ", val) => Ok(HeadingLine(Four, val.to_string())),
-            ("5# ", val) => Ok(HeadingLine(Five, val.to_string())),
-            ("6# ", val) => Ok(HeadingLine(Six, val.to_string())),
-            (">> ", val) => Ok(QuoteLine(val.to_string())),
-            (_, _) => Ok(TextLine(input.to_string())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dropdown_test() {
+        let expected = MainLine::DropdownLine("Dropdown".to_string(), "Hidden content".to_string());
+
+        let line = "...Dropdown | Hidden content";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn quote_test() {
+        let expected = MainLine::QuoteLine("Quote".to_string());
+
+        let line = "///Quote";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn text_preformatted_test() {
+        let expected = MainLine::PreformattedLine(true, "Textual preformatted line".to_string());
+
+        let line = "'''Textual preformatted line";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn preformatted_test() {
+        let expected = MainLine::PreformattedLine(false, "".to_string());
+
+        let line = ";;;";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn link_test() {
+        let expected = MainLine::LinkLine(Link {
+            url: "https://example.com/".to_string(),
+            label: Some("Label".to_string()),
+        });
+
+        let line = "@@@https://example.com/ | Label";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn unlabeled_link_test() {
+        let expected = MainLine::LinkLine(Link {
+            url: "https://example.com/".to_string(),
+            label: None,
+        });
+
+        let line = "@@@https://example.com/";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn separator_line() {
+        let expected = MainLine::SeparatorLine;
+
+        let line = "=== Something";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn admonition_test() {
+        let expected = MainLine::AdmonitionLine(AdmonitionType::Warning, "Warning".to_string());
+
+        let line = "*! Warning";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn olist_test() {
+        let expected =
+            MainLine::OListLine(Level::Three, "1.".to_string(), "Unordered list".to_string());
+
+        let line = "3* 1. | Unordered list";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn ulist_test() {
+        let expected = MainLine::UListLine(Level::Three, "Unordered list".to_string());
+
+        let line = "3- Unordered list";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn heading_test() {
+        let expected = MainLine::HeadingLine(Level::One, "Heading".to_string());
+
+        let line = "1# Heading";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
+    }
+
+    #[test]
+    fn short_text_line() {
+        let expected = MainLine::TextLine("()".to_string());
+
+        let line = "()";
+
+        let parsed = MainLine::parse(line);
+
+        assert_eq!(parsed.unwrap(), expected);
     }
 }
