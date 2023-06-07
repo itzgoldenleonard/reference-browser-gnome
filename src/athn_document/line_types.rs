@@ -108,15 +108,22 @@ impl MainLine {
 
         // If it ends with space
         if lti[2] == 0x20 {
+            // Try making the level object here and using if level.is_ok() in the match arms
             match lti[1] {
-                0x2d => Ok(UListLine(lti[0].try_into()?, content.into())),
-                0x2a => Ok(OListLine(
+                0x2d if (0x31..=0x36).contains(&lti[0]) => {
+                    Ok(UListLine(lti[0].try_into()?, content.into()))
+                }
+                0x2a if (0x31..=0x36).contains(&lti[0]) => Ok(OListLine(
                     lti[0].try_into()?,
                     split_delimited(content)?.0,
                     split_delimited(content)?.1,
                 )),
-                0x21 => Ok(AdmonitionLine(lti[0].try_into()?, content.into())),
-                0x23 => Ok(HeadingLine(lti[0].try_into()?, content.into())),
+                0x21 if lti[0] == 0x2a || lti[0] == 0x21 || lti[0] == 0x5f => {
+                    Ok(AdmonitionLine(lti[0].try_into()?, content.into()))
+                }
+                0x23 if (0x31..=0x36).contains(&lti[0]) => {
+                    Ok(HeadingLine(lti[0].try_into()?, content.into()))
+                }
                 _ => text_line(),
             }
         } else {

@@ -20,7 +20,7 @@ mod parse_tests {
 
         let document = parse(content.lines(), Document::builder(), ParserState::default()).unwrap();
 
-        assert_ne!(document.build(), expected);
+        assert_eq!(document.build(), expected);
     }
 }
 
