@@ -386,6 +386,7 @@ impl<U> GlobalProperties<U> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
