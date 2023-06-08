@@ -1,4 +1,5 @@
 use crate::athn_document::{parse, Document, ParserState};
+use url::Url;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
@@ -35,7 +36,7 @@ impl Window {
     #[template_callback]
     fn on_search_entry_activate(&self, search_entry: &gtk::SearchEntry) {
         // Extract the query from the search entry and parse it into a URL
-        let url = search_entry.text().to_string();
+        let url = Url::parse(&search_entry.text().to_string()).unwrap();
 
         // Make a reqwest client that doesnt validate certificates
         let client = reqwest::blocking::Client::builder()
@@ -45,13 +46,13 @@ impl Window {
 
         // Make the actual request
         let response = client
-            .get(url)
+            .get(url.clone())
             .send()
             .expect("Failed to make a request to the URL");
 
         // Extract and parse the athn document data from the Response and pass it to the render function
         let document = parse(response.text().unwrap().as_str().lines(), Document::builder(), ParserState::default()).unwrap().build();
-        self.obj().render(document);
+        self.obj().render(document, url);
     }
 }
 
