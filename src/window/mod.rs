@@ -5,7 +5,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Application;
 use glib::Object;
-use gtk::{gio, glib, Label, Separator};
+use gtk::{gio, glib, Label, Separator, TextBuffer, TextView};
 use url::Url;
 
 glib::wrapper! {
@@ -97,6 +97,18 @@ impl Window {
         // Horizontal seperator between metadata and main sections
         self.imp().canvas.append(&Separator::builder().build());
 
+        let level_number = |l: &crate::athn_document::line_types::Level| {
+            use crate::athn_document::line_types::Level::*;
+            match l {
+                One => 1,
+                Two => 2,
+                Three => 3,
+                Four => 4,
+                Five => 5,
+                Six => 6,
+            }
+        };
+
         // Render main section
         for line in document.main {
             use crate::athn_document::line_types::MainLine::*;
@@ -105,11 +117,12 @@ impl Window {
                     let text_obj = Label::builder()
                         .label(content)
                         .halign(gtk::Align::Start)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
                         .build();
 
                     self.imp().canvas.append(&text_obj);
                 }
-
 
                 LinkLine(crate::athn_document::line_types::Link { url, label }) => {
                     let url_parsed = match Url::parse(&url) {
@@ -135,32 +148,64 @@ impl Window {
                         })
                         .use_markup(true)
                         .halign(gtk::Align::Start)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
                         .build();
 
                     self.imp().canvas.append(&link_obj);
                 }
 
-
                 PreformattedLine(_, content) => {
-                    let text_obj = Label::builder()
-                        .label(content)
-                        .halign(gtk::Align::Start)
+                    let text_obj = TextView::builder()
+                        .editable(false)
+                        .monospace(true)
+                        .cursor_visible(false)
                         .build();
+
+                    let buffer = TextBuffer::builder().text(content).build();
+
+                    text_obj.set_buffer(Some(&buffer));
 
                     text_obj.add_css_class("monospace");
                     self.imp().canvas.append(&text_obj);
                 }
 
+                UListLine(level, content) => {
+                    let list_point_obj = Label::builder()
+                        .label(format!("• {}", content))
+                        .halign(gtk::Align::Start)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
+                        .margin_start(level_number(&level) * 12) // It's probably not a good idea to use a fixed number like this for indentation
+                        .build();
+
+                    self.imp().canvas.append(&list_point_obj);
+                }
+
+                OListLine(level, bullet, content) => {
+                    let bullet_width: i32 = 5 * bullet.len() as i32; // Crude approximation, could definitely be better
+
+                    let list_point_obj = Label::builder()
+                        .label(format!("{} {}", bullet, content))
+                        .halign(gtk::Align::Start)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
+                        .margin_start(std::cmp::max(level_number(&level) * 12 - bullet_width, 0))
+                        .build();
+
+                    self.imp().canvas.append(&list_point_obj);
+                }
 
                 SeparatorLine => {
                     self.imp().canvas.append(&Separator::builder().build());
                 }
 
-
                 HeadingLine(level, content) => {
                     let heading_obj = Label::builder()
                         .label(content)
                         .halign(gtk::Align::Start)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
                         .build();
                     use crate::athn_document::line_types::Level::*;
                     let heading_class = match level {

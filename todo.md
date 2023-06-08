@@ -1,9 +1,5 @@
 # Before first draft release
 - [ ] Render the main section
-    - [X] Link
-    - [ ] Preformatted
-    - [ ] Unordered list
-    - [ ] Ordered list
     - [ ] Dropdown
     - [ ] Admonition
     - [ ] Quote
