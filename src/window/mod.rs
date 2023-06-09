@@ -3,9 +3,9 @@ mod imp;
 use crate::athn_document::Document;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use adw::{Application, ExpanderRow, ActionRow};
+use adw::{ActionRow, Application, ExpanderRow};
 use glib::Object;
-use gtk::{gio, glib, Label, Separator, TextBuffer, TextView, ListBox};
+use gtk::{gio, glib, Label, ListBox, Separator, TextBuffer, TextView};
 use url::Url;
 
 glib::wrapper! {
@@ -49,8 +49,9 @@ impl Window {
             (Some(author), Some(license)) => {
                 let metaline = Label::builder()
                     .label(format!(
-                        "By: {}. License: {}",
+                        "By: {}. License{}: {}",
                         author.iter().fold(String::new(), author_formatter),
+                        if license.len() > 1 { "s" } else { "" },
                         license.iter().fold(String::new(), license_formatter)
                     ))
                     .halign(gtk::Align::Start)
@@ -70,7 +71,8 @@ impl Window {
             (None, Some(license)) => {
                 let metaline = Label::builder()
                     .label(format!(
-                        "License: {}",
+                        "License{}: {}",
+                        if license.len() > 1 { "s" } else { "" },
                         license.iter().fold(String::new(), license_formatter)
                     ))
                     .halign(gtk::Align::Start)
@@ -207,19 +209,47 @@ impl Window {
                         .build();
                     list_box.add_css_class("boxed-list");
 
-                    let content_row = ActionRow::builder()
-                        .title_lines(0)
-                        .title(content)
-                        .build();
+                    let content_row = ActionRow::builder().title_lines(0).title(content).build();
 
-                    let expander = ExpanderRow::builder()
-                        .title(label)
-                        .build();
+                    let expander = ExpanderRow::builder().title(label).build();
 
                     expander.add_row(&content_row);
                     list_box.append(&expander);
 
                     self.imp().canvas.append(&list_box);
+                }
+
+                AdmonitionLine(admonition_type, content) => {
+                    use crate::athn_document::line_types::AdmonitionType::*;
+
+                    let admonition_label = Label::builder()
+                        .label(format!("{} {}", match admonition_type {
+                            // It would be better to use a proper icon, but then again it might
+                            // also be better to use something that's not a button
+                            Note => "ℹ️",
+                            Warning => "⚠️",
+                            Danger => "⛔",
+                        }, content))
+                        .halign(gtk::Align::Start)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
+                        .build();
+
+                    let admonition_obj = gtk::Button::builder()
+                        .child(&admonition_label)
+                        .can_focus(false)
+                        .can_target(false)
+                        .focus_on_click(false)
+                        .focusable(false)
+                        .build();
+
+                    match admonition_type {
+                        Warning => admonition_obj.add_css_class("warning"),
+                        Danger => admonition_obj.add_css_class("error"),
+                        _ => (),
+                    }
+
+                    self.imp().canvas.append(&admonition_obj);
                 }
 
                 HeadingLine(level, content) => {
@@ -244,7 +274,7 @@ impl Window {
 
                 QuoteLine(content) => {
                     let text_obj = Label::builder()
-                        .label(format!("“<i>{}</i>”" ,content))
+                        .label(format!("“<i>{}</i>”", content))
                         .halign(gtk::Align::Start)
                         .wrap(true)
                         .wrap_mode(gtk::pango::WrapMode::WordChar)

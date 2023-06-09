@@ -1,13 +1,13 @@
 # Before first draft release
 - [ ] Render the main section
-    - [ ] Admonition
-    - [ ] Quote
     - [ ] Formatted text
 - [ ] Clear screen (so that you can visit multiple pages in one session without having to close the browser)
 - [ ] Render the header and footer sections
 - [ ] Remove all the unwrap()s
+    - [ ] Error screens
 - [ ] Add ability to open files on the disk
 - [ ] Add scrolling and make the lines not clickable
+- [ ] Open with functionality
 - [ ] Send a form response
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation
