@@ -116,9 +116,52 @@ impl Window {
             use crate::athn_document::line_types::MainLine::*;
             match line {
                 TextLine(content) => {
+                    // Change ATHN formatting into pango markup
+                    let content: String = content
+                        .as_str()
+                        .split("\\r")
+                        .map(|s| {
+                            // The whole thing with the vector with sorting and filtering and stuff
+                            // is needed because pango needs the end tags to be in the reverse
+                            // order of the start tags
+                            let mut states = vec![
+                                ("</b>", s.find("\\b")),
+                                ("</i>", s.find("\\i")),
+                                ("</tt>", s.find("\\p")),
+                            ]
+                            .iter()
+                            .filter_map(|state| match state.1 {
+                                None => None,
+                                Some(n) => Some((state.0, n)),
+                            })
+                            .collect::<Vec<(&str, usize)>>();
+
+                            // This is probably not the most efficient way to do this
+                            let s = s.replacen("\\b", "<b>", 1);
+                            let s = s.replacen("\\i", "<i>", 1);
+                            let s = s.replacen("\\p", "<tt>", 1);
+                            let s = s.replace("\\b", "");
+                            let s = s.replace("\\i", "");
+                            let mut s = s.replace("\\p", "");
+
+                            states.sort_unstable_by_key(|k| k.1);
+                            states.reverse();
+                            s.push_str(
+                                states
+                                    .iter()
+                                    .map(|state| state.0.to_owned())
+                                    .collect::<String>()
+                                    .as_str(),
+                            );
+
+                            s
+                        })
+                        .collect();
+
                     let text_obj = Label::builder()
                         .label(content)
                         .halign(gtk::Align::Start)
+                        .use_markup(true)
                         .wrap(true)
                         .wrap_mode(gtk::pango::WrapMode::WordChar)
                         .build();
@@ -223,13 +266,17 @@ impl Window {
                     use crate::athn_document::line_types::AdmonitionType::*;
 
                     let admonition_label = Label::builder()
-                        .label(format!("{} {}", match admonition_type {
-                            // It would be better to use a proper icon, but then again it might
-                            // also be better to use something that's not a button
-                            Note => "ℹ️",
-                            Warning => "⚠️",
-                            Danger => "⛔",
-                        }, content))
+                        .label(format!(
+                            "{} {}",
+                            match admonition_type {
+                                // It would be better to use a proper icon, but then again it might
+                                // also be better to use something that's not a button
+                                Note => "ℹ️",
+                                Warning => "⚠️",
+                                Danger => "⛔",
+                            },
+                            content
+                        ))
                         .halign(gtk::Align::Start)
                         .wrap(true)
                         .wrap_mode(gtk::pango::WrapMode::WordChar)

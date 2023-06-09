@@ -1,6 +1,4 @@
 # Before first draft release
-- [ ] Render the main section
-    - [ ] Formatted text
 - [ ] Clear screen (so that you can visit multiple pages in one session without having to close the browser)
 - [ ] Render the header and footer sections
 - [ ] Remove all the unwrap()s
