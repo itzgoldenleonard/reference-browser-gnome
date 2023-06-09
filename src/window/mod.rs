@@ -3,9 +3,9 @@ mod imp;
 use crate::athn_document::Document;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use adw::Application;
+use adw::{Application, ExpanderRow, ActionRow};
 use glib::Object;
-use gtk::{gio, glib, Label, Separator, TextBuffer, TextView};
+use gtk::{gio, glib, Label, Separator, TextBuffer, TextView, ListBox};
 use url::Url;
 
 glib::wrapper! {
@@ -156,6 +156,7 @@ impl Window {
                 }
 
                 PreformattedLine(_, content) => {
+                    // I'm using textviews to hopefully one day join adjacent lines into 1 code block
                     let text_obj = TextView::builder()
                         .editable(false)
                         .monospace(true)
@@ -168,6 +169,10 @@ impl Window {
 
                     text_obj.add_css_class("monospace");
                     self.imp().canvas.append(&text_obj);
+                }
+
+                SeparatorLine => {
+                    self.imp().canvas.append(&Separator::builder().build());
                 }
 
                 UListLine(level, content) => {
@@ -196,8 +201,25 @@ impl Window {
                     self.imp().canvas.append(&list_point_obj);
                 }
 
-                SeparatorLine => {
-                    self.imp().canvas.append(&Separator::builder().build());
+                DropdownLine(label, content) => {
+                    let list_box = ListBox::builder()
+                        .selection_mode(gtk::SelectionMode::None)
+                        .build();
+                    list_box.add_css_class("boxed-list");
+
+                    let content_row = ActionRow::builder()
+                        .title_lines(0)
+                        .title(content)
+                        .build();
+
+                    let expander = ExpanderRow::builder()
+                        .title(label)
+                        .build();
+
+                    expander.add_row(&content_row);
+                    list_box.append(&expander);
+
+                    self.imp().canvas.append(&list_box);
                 }
 
                 HeadingLine(level, content) => {
@@ -218,6 +240,18 @@ impl Window {
                     };
                     heading_obj.add_css_class(heading_class);
                     self.imp().canvas.append(&heading_obj);
+                }
+
+                QuoteLine(content) => {
+                    let text_obj = Label::builder()
+                        .label(format!("“<i>{}</i>”" ,content))
+                        .halign(gtk::Align::Start)
+                        .wrap(true)
+                        .wrap_mode(gtk::pango::WrapMode::WordChar)
+                        .use_markup(true)
+                        .build();
+
+                    self.imp().canvas.append(&text_obj);
                 }
                 _ => (),
             }

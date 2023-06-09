@@ -1,6 +1,5 @@
 # Before first draft release
 - [ ] Render the main section
-    - [ ] Dropdown
     - [ ] Admonition
     - [ ] Quote
     - [ ] Formatted text
@@ -16,3 +15,4 @@
 - [ ] Redirect form sections
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Add an option to use a custom language preference list
+- [ ] Submit to flathub
