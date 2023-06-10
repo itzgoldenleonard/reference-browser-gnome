@@ -22,6 +22,14 @@ impl Window {
     }
 
     pub fn render(&self, document: Document, base_url: Url) {
+        // Clear the screen
+        self.imp().canvas.set_selection_mode(gtk::SelectionMode::Multiple);
+        self.imp().canvas.select_all();
+        for widget in self.imp().canvas.selected_rows() {
+            self.imp().canvas.remove(&widget);
+        }
+        self.imp().canvas.set_selection_mode(gtk::SelectionMode::None);
+        
         // Show title metadata attribute
         let title = Label::builder()
             .label(document.metadata.title.as_str())
@@ -137,6 +145,7 @@ impl Window {
                             .collect::<Vec<(&str, usize)>>();
 
                             // This is probably not the most efficient way to do this
+                            let s = s.replace("<", "&lt;"); // Escape pango markup in original line
                             let s = s.replacen("\\b", "<b>", 1);
                             let s = s.replacen("\\i", "<i>", 1);
                             let s = s.replacen("\\p", "<tt>", 1);
