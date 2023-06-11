@@ -23,6 +23,7 @@ impl Window {
 
     pub fn render(&self, document: Document, base_url: Url) {
         // Clear the screen
+        // When I gtk4.12 I can use this https://docs.gtk.org/gtk4/method.ListBox.remove_all.html
         self.imp().canvas.set_selection_mode(gtk::SelectionMode::Multiple);
         self.imp().canvas.select_all();
         for widget in self.imp().canvas.selected_rows() {
@@ -210,19 +211,30 @@ impl Window {
                 }
 
                 PreformattedLine(_, content) => {
-                    // I'm using textviews to hopefully one day join adjacent lines into 1 code block
-                    let text_obj = TextView::builder()
-                        .editable(false)
-                        .monospace(true)
-                        .cursor_visible(false)
-                        .build();
+                    // TODO: There's a bug where these lines wont appear on the screen until the
+                    // user scrolls or resized the window
+                    let last_line = self.imp().canvas.last_child().unwrap().last_child().unwrap();
 
-                    let buffer = TextBuffer::builder().text(content).build();
+                    match last_line.downcast::<TextView>() {
+                        Err(_) => {
+                            let text_obj = TextView::builder()
+                                .editable(false)
+                                .monospace(true)
+                                .cursor_visible(false)
+                                .build();
 
-                    text_obj.set_buffer(Some(&buffer));
+                            let buffer = TextBuffer::builder().text(content).build();
 
-                    text_obj.add_css_class("monospace");
-                    self.imp().canvas.append(&text_obj);
+                            text_obj.set_buffer(Some(&buffer));
+
+                            text_obj.add_css_class("monospace");
+                            self.imp().canvas.append(&text_obj);
+                        }
+                        Ok(text_view) => {
+                            text_view.buffer().insert_at_cursor(format!("\n{}", content).as_str());
+                        }
+                    }
+
                 }
 
                 SeparatorLine => {

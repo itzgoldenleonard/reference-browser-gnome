@@ -35,6 +35,7 @@ impl ObjectSubclass for Window {
 impl Window {
     #[template_callback]
     fn on_search_entry_activate(&self, search_entry: &gtk::SearchEntry) {
+        let start_time = std::time::Instant::now();
         // Extract the query from the search entry and parse it into a URL
         let url = Url::parse(&search_entry.text().to_string()).unwrap();
 
@@ -49,10 +50,30 @@ impl Window {
             .get(url.clone())
             .send()
             .expect("Failed to make a request to the URL");
+        let request_time = start_time.elapsed();
 
         // Extract and parse the athn document data from the Response and pass it to the render function
         let document = parse(response.text().unwrap().as_str().lines(), Document::builder(), ParserState::default()).unwrap().build();
+        let parse_time = start_time.elapsed();
         self.obj().render(document, url);
+
+        let total_time = start_time.elapsed();
+        println!("
+        ╭─────────────────┬─────────
+        │ Request timing breakdown:
+        ├─────────────────┼─────────
+        │ Network fetch:  │ {:?}
+        │ Document parse: │ {:?}
+        │ Rendering:      │ {:?}
+        ├─────────────────┼─────────
+        │ \x1b[1mTotal\x1b[0m           │ \x1b[1m{:?}\x1b[0m
+        ╰─────────────────┴─────────
+        ",
+        request_time,
+        parse_time - request_time,
+        total_time - parse_time,
+        total_time
+        );
     }
 }
 
