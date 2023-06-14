@@ -35,6 +35,17 @@ impl Window {
             .canvas
             .set_selection_mode(gtk::SelectionMode::None);
 
+        self.imp()
+            .header
+            .set_selection_mode(gtk::SelectionMode::Multiple);
+        self.imp().header.select_all();
+        for widget in self.imp().header.selected_rows() {
+            self.imp().header.remove(&widget);
+        }
+        self.imp()
+            .header
+            .set_selection_mode(gtk::SelectionMode::Single);
+
         // Show title metadata attribute
         let title = Label::builder()
             .label(document.metadata.title.as_str())
@@ -68,6 +79,8 @@ impl Window {
                         license.iter().fold(String::new(), license_formatter)
                     ))
                     .halign(gtk::Align::Start)
+                    .wrap(true)
+                    .wrap_mode(gtk::pango::WrapMode::WordChar)
                     .build();
                 self.imp().canvas.append(&metaline);
             }
@@ -78,6 +91,8 @@ impl Window {
                         author.iter().fold(String::new(), author_formatter)
                     ))
                     .halign(gtk::Align::Start)
+                    .wrap(true)
+                    .wrap_mode(gtk::pango::WrapMode::WordChar)
                     .build();
                 self.imp().canvas.append(&metaline);
             }
@@ -89,6 +104,8 @@ impl Window {
                         license.iter().fold(String::new(), license_formatter)
                     ))
                     .halign(gtk::Align::Start)
+                    .wrap(true)
+                    .wrap_mode(gtk::pango::WrapMode::WordChar)
                     .build();
                 self.imp().canvas.append(&metaline);
             }
@@ -105,6 +122,8 @@ impl Window {
                         .unwrap_or("Default subtitle".to_string()),
                 )
                 .halign(gtk::Align::Start)
+                .wrap(true)
+                .wrap_mode(gtk::pango::WrapMode::WordChar)
                 .build();
             self.imp().canvas.append(&subtitle);
         }
@@ -368,10 +387,42 @@ impl Window {
             }
         }
 
+        match document.header {
+            None => (),
+            Some(header) => {
+                for line in header {
+                    use crate::athn_document::line_types::HeaderLine::*;
+                    let (url, label) = match line {
+                        LinkLine(link) => (link.url, link.label),
+                    };
+
+                    let url_parsed = match Url::parse(&url) {
+                        Ok(u) => Some(u),
+                        Err(url::ParseError::RelativeUrlWithoutBase) => {
+                            Some(base_url.join(&url).unwrap())
+                        }
+                        Err(_) => None,
+                    };
+
+                    let true_label = if label.is_none() {
+                        url
+                    } else {
+                        label.unwrap_or_default()
+                    };
+
+                    let text_obj = Label::builder().
+                        label(true_label)
+                        .tooltip_text(url_parsed.unwrap().as_str())
+                        .build();
+
+                    self.imp().header.append(&text_obj);
+                }
+            }
+        }
+
         match document.footer {
             Some(footer) => {
                 let footer_separator = Separator::builder().margin_top(26).build();
-                println!("Previous line is the separator");
                 self.imp().canvas.append(&footer_separator);
 
                 for line in footer {

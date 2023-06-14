@@ -3,12 +3,19 @@ use url::Url;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
-use gtk::{glib, CompositeTemplate, ListBox};
+use gtk::{glib, CompositeTemplate, ListBox, Label, SearchEntry};
+use adw::Leaflet;
 
 // Object holding the state
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/org/athn/browser/gnome/window.ui")]
 pub struct Window {
+    #[template_child]
+    pub leaflet: TemplateChild<Leaflet>,
+    #[template_child]
+    pub header: TemplateChild<ListBox>,
+    #[template_child]
+    pub search_entry: TemplateChild<SearchEntry>,
     #[template_child]
     pub canvas: TemplateChild<ListBox>,
 }
@@ -74,6 +81,29 @@ impl Window {
         total_time - parse_time,
         total_time
         );
+    }
+
+    #[template_callback]
+    fn on_hide_header_button_clicked(&self, _button: &gtk::Button) {
+        self.leaflet.navigate(adw::NavigationDirection::Forward);
+    }
+
+    #[template_callback]
+    fn on_show_header_button_clicked(&self, _button: &gtk::Button) {
+        self.leaflet.navigate(adw::NavigationDirection::Back);
+    }
+
+    #[template_callback]
+    fn on_header_entry_activated(&self, row: &gtk::ListBoxRow) {
+        let header_entry = match row.child().unwrap().downcast::<Label>() {
+            Err(_) => return,
+            Ok(h) => h,
+        };
+
+        let navigate_to = header_entry.tooltip_text().unwrap();
+        self.search_entry.delete_text(0, i32::MAX);
+        self.search_entry.insert_text(&navigate_to, &mut 0);
+        self.search_entry.emit_activate();
     }
 }
 

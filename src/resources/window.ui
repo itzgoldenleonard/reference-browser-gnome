@@ -2,43 +2,121 @@
 <interface>
     <template class="AthnBrowserAppWindow" parent="AdwApplicationWindow">
         <property name="title">ATHN browser</property>
-        <property name="default_width">350</property>
-        <child>
-            <object class="GtkBox">
-                <property name="orientation">vertical</property>
+        <property name="default_width">950</property>
+        <property name="default_height">600</property>
+        <property name="content">
+            <object class="AdwLeaflet" id="leaflet">
+                <property name="can-navigate-back">True</property>
+
+                <!-- Sidebar -->
                 <child>
-                    <object class="AdwHeaderBar">
-                        <child type="title">
-                            <object class="AdwClamp">
-                                <property name="hexpand">True</property>
-                                <child>
-                                    <object class="GtkSearchEntry" id="search_entry">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                        <property name="halign">center</property>
-                                        <property name="valign">center</property>
+                    <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="width-request">200</property>
+                        <!-- Sidebar Header bar -->
+                        <child>
+                            <object class="AdwHeaderBar">
+                                <child type="title">
+                                    <object class="AdwWindowTitle" />
+                                </child>
+                                <binding name="show-end-title-buttons">
+                                    <lookup name="folded">leaflet</lookup>
+                                </binding>
+                                <!-- Hide header button -->
+                                <child type="start">
+                                    <object class="GtkButton" id="hide_header_button">
+                                        <signal name="clicked" handler="on_hide_header_button_clicked" swapped="true"/>
+                                        <binding name="visible">
+                                            <lookup name="folded">leaflet</lookup>
+                                        </binding>
+                                        <property name="icon-name">go-previous-symbolic</property>
+                                        <property name="tooltip-text" translatable="yes">Hide header</property>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="GtkScrolledWindow">
+                                <property name="vexpand">True</property>
+                                <property name="child">
+                                    <object class="GtkListBox" id="header">
+                                        <style>
+                                            <class name="navigation-sidebar" />
+                                        </style>
+                                        <signal name="row_activated" handler="on_header_entry_activated" swapped="true"/>
+                                    </object>
+                                </property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+
+                <!-- Leaflet Separator -->
+                <child>
+                    <object class="AdwLeafletPage">
+                        <property name="navigatable">False</property>
+                        <property name="child">
+                            <object class="GtkSeparator" />
+                        </property>
+                    </object>
+                </child>
+
+                <!-- Main window -->
+                <child>
+                    <object class="GtkBox">
+                        <property name="hexpand">True</property>
+                        <property name="orientation">vertical</property>
+                        <!-- Main window header bar (with search entry) -->
+                        <child>
+                            <object class="AdwHeaderBar">
+                                <child type="start">
+                                    <object class="GtkButton" id="show_header_button">
+                                        <signal name="clicked" handler="on_show_header_button_clicked" swapped="true"/>
+                                        <binding name="visible">
+                                            <lookup name="folded">leaflet</lookup>
+                                        </binding>
+                                        <property name="icon-name">go-previous-symbolic</property>
+                                        <property name="tooltip-text" translatable="yes">Show header</property>
+                                    </object>
+                                </child>
+
+                                <child type="title">
+                                    <object class="AdwClamp">
                                         <property name="hexpand">True</property>
-                                        <property name="placeholder-text">Enter URL</property>
-                                        <signal name="activate" handler="on_search_entry_activate" swapped="true"/>
+                                        <child>
+                                            <object class="GtkSearchEntry" id="search_entry">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="halign">center</property>
+                                                <property name="valign">center</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="placeholder-text">Enter URL</property>
+                                                <signal name="activate" handler="on_search_entry_activate" swapped="true"/>
+                                            </object>
+                                        </child>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <!-- Canvas -->
+                        <child>
+                            <object class="GtkScrolledWindow">
+                                <property name="hscrollbar-policy">never</property>
+                                <property name="max-content-width">1000</property>
+                                <property name="vexpand">True</property>
+                                <child>
+                                    <object class="GtkListBox" id="canvas">
+                                          <property name="selection-mode">none</property>
                                     </object>
                                 </child>
                             </object>
                         </child>
                     </object>
                 </child>
-                <child>
-                    <object class="GtkScrolledWindow">
-                        <property name="hscrollbar-policy">never</property>
-                        <property name="max-content-width">1000</property>
-                        <property name="vexpand">True</property>
-                        <child>
-                            <object class="GtkListBox" id="canvas">
-                                  <property name="selection-mode">none</property>
-                            </object>
-                        </child>
-                    </object>
-                </child>
+
             </object>
-        </child>
+        </property>
     </template>
 </interface>
