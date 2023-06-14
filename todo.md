@@ -1,7 +1,15 @@
 # Before first draft release
-- [ ] Render the header and footer sections
 - [ ] Remove all the unwrap()s
-    - [ ] Error screens
+    - [ ] Alternative screens
+        - [ ] Start screen
+        - [ ] Request error screen
+            - [ ] Error message
+        - [ ] Parse error screen
+            - [ ] Error message
+            - [ ] Open in other app button
+            - [ ] Download button
+    - [X] All the other unwraps
+
 - [ ] Add ability to open files on the disk
 - [ ] Add scrolling and make the lines not clickable
 - [ ] Open with functionality
