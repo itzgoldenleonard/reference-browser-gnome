@@ -1,10 +1,10 @@
 use crate::athn_document::{parse, Document, ParserState};
-use url::Url;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use glib::subclass::InitializingObject;
-use gtk::{glib, CompositeTemplate, ListBox, Label, SearchEntry};
 use adw::Leaflet;
+use glib::subclass::InitializingObject;
+use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry};
+use url::Url;
 
 // Object holding the state
 #[derive(CompositeTemplate, Default)]
@@ -60,12 +60,19 @@ impl Window {
         let request_time = start_time.elapsed();
 
         // Extract and parse the athn document data from the Response and pass it to the render function
-        let document = parse(response.text().unwrap().as_str().lines(), Document::builder(), ParserState::default()).unwrap().build();
+        let document = parse(
+            response.text().unwrap().as_str().lines(),
+            Document::builder(),
+            ParserState::default(),
+        )
+        .unwrap()
+        .build();
         let parse_time = start_time.elapsed();
         self.obj().render(document, url);
 
         let total_time = start_time.elapsed();
-        println!("
+        println!(
+            "
         ╭─────────────────┬─────────
         │ Request timing breakdown:
         ├─────────────────┼─────────
@@ -76,10 +83,10 @@ impl Window {
         │ \x1b[1mTotal\x1b[0m           │ \x1b[1m{:?}\x1b[0m
         ╰─────────────────┴─────────
         ",
-        request_time,
-        parse_time - request_time,
-        total_time - parse_time,
-        total_time
+            request_time,
+            parse_time - request_time,
+            total_time - parse_time,
+            total_time
         );
     }
 
@@ -95,12 +102,24 @@ impl Window {
 
     #[template_callback]
     fn on_header_entry_activated(&self, row: &gtk::ListBoxRow) {
-        let header_entry = match row.child().unwrap().downcast::<Label>() {
-            Err(_) => return,
-            Ok(h) => h,
+        let header_entry = match row.child() {
+            None => {
+                eprintln!("A ListBoxRow without a child was clicked in the 'header' ListBox. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues");
+                return;
+            }
+            Some(child) => match child.downcast::<Label>() {
+                Err(_) => return,
+                Ok(h) => h,
+            },
         };
 
-        let navigate_to = header_entry.tooltip_text().unwrap();
+        let navigate_to = match header_entry.tooltip_text() {
+            Some(v) => v,
+            None => {
+                eprintln!("A header entry without a url in its tooltip was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues");
+                return;
+            }
+        };
         self.search_entry.delete_text(0, i32::MAX);
         self.search_entry.insert_text(&navigate_to, &mut 0);
         self.search_entry.emit_activate();
@@ -121,7 +140,3 @@ impl ApplicationWindowImpl for Window {}
 // Trait shared by all adw application windows
 impl AdwApplicationWindowImpl for Window {}
 
-/*
-let label = Label::new(document.metadata.title.to_string());
-list_box.append(&label);
-*/

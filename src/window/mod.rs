@@ -5,7 +5,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ExpanderRow};
 use glib::Object;
-use gtk::{gio, glib, Label, ListBox, Separator, TextBuffer, TextView};
+use gtk::{gio, glib, Label, ListBox, ListBoxRow, Separator, TextBuffer, TextView};
 use url::Url;
 
 glib::wrapper! {
@@ -205,9 +205,10 @@ impl Window {
                 LinkLine(crate::athn_document::line_types::Link { url, label }) => {
                     let url_parsed = match Url::parse(&url) {
                         Ok(u) => Some(u),
-                        Err(url::ParseError::RelativeUrlWithoutBase) => {
-                            Some(base_url.join(&url).unwrap())
-                        }
+                        Err(url::ParseError::RelativeUrlWithoutBase) => match base_url.join(&url) {
+                            Ok(u) => Some(u),
+                            Err(_) => None,
+                        },
                         Err(_) => None,
                     };
 
@@ -234,16 +235,16 @@ impl Window {
                 }
 
                 PreformattedLine(_, content) => {
-                    let last_line = self
-                        .imp()
-                        .canvas
-                        .last_child()
-                        .unwrap()
-                        .last_child()
-                        .unwrap();
+                    let last_line = || {
+                        self.imp()
+                            .canvas
+                            .last_child()?
+                            .last_child()
+                            .and_downcast::<TextView>()
+                    };
 
-                    match last_line.downcast::<TextView>() {
-                        Err(_) => {
+                    match last_line() {
+                        None => {
                             let text_obj = TextView::builder()
                                 .editable(false)
                                 .monospace(true)
@@ -261,7 +262,7 @@ impl Window {
                             // document) not rendering properly until the window is resized
                             text_obj.set_height_request(20);
                         }
-                        Ok(text_view) => {
+                        Some(text_view) => {
                             text_view
                                 .buffer()
                                 .insert_at_cursor(format!("\n{}", content).as_str());
@@ -398,9 +399,10 @@ impl Window {
 
                     let url_parsed = match Url::parse(&url) {
                         Ok(u) => Some(u),
-                        Err(url::ParseError::RelativeUrlWithoutBase) => {
-                            Some(base_url.join(&url).unwrap())
-                        }
+                        Err(url::ParseError::RelativeUrlWithoutBase) => match base_url.join(&url) {
+                            Ok(u) => Some(u),
+                            Err(_) => None,
+                        },
                         Err(_) => None,
                     };
 
@@ -410,12 +412,31 @@ impl Window {
                         label.unwrap_or_default()
                     };
 
-                    let text_obj = Label::builder().
-                        label(true_label)
-                        .tooltip_text(url_parsed.unwrap().as_str())
-                        .build();
+                    match url_parsed {
+                        Some(url_parsed) => {
+                            let text_obj = Label::builder()
+                                .label(true_label)
+                                .tooltip_text(url_parsed.as_str())
+                                .wrap(true)
+                                .build();
 
-                    self.imp().header.append(&text_obj);
+                            self.imp().header.append(&text_obj);
+                        }
+                        None => {
+                            let text_obj = Label::builder()
+                                .label(format!("{} (Broken link)", true_label))
+                                .wrap(true)
+                                .build();
+
+                            let row = ListBoxRow::builder()
+                                .activatable(false)
+                                .child(&text_obj)
+                                .build();
+                            row.add_css_class("dim-label");
+
+                            self.imp().header.append(&row);
+                        }
+                    }
                 }
             }
         }
@@ -488,7 +509,10 @@ impl Window {
                             let url_parsed = match Url::parse(&url) {
                                 Ok(u) => Some(u),
                                 Err(url::ParseError::RelativeUrlWithoutBase) => {
-                                    Some(base_url.join(&url).unwrap())
+                                    match base_url.join(&url) {
+                                        Ok(u) => Some(u),
+                                        Err(_) => None,
+                                    }
                                 }
                                 Err(_) => None,
                             };
