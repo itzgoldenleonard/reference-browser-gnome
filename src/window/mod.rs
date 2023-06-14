@@ -24,13 +24,17 @@ impl Window {
     pub fn render(&self, document: Document, base_url: Url) {
         // Clear the screen
         // When I gtk4.12 I can use this https://docs.gtk.org/gtk4/method.ListBox.remove_all.html
-        self.imp().canvas.set_selection_mode(gtk::SelectionMode::Multiple);
+        self.imp()
+            .canvas
+            .set_selection_mode(gtk::SelectionMode::Multiple);
         self.imp().canvas.select_all();
         for widget in self.imp().canvas.selected_rows() {
             self.imp().canvas.remove(&widget);
         }
-        self.imp().canvas.set_selection_mode(gtk::SelectionMode::None);
-        
+        self.imp()
+            .canvas
+            .set_selection_mode(gtk::SelectionMode::None);
+
         // Show title metadata attribute
         let title = Label::builder()
             .label(document.metadata.title.as_str())
@@ -211,9 +215,13 @@ impl Window {
                 }
 
                 PreformattedLine(_, content) => {
-                    // TODO: There's a bug where these lines wont appear on the screen until the
-                    // user scrolls or resized the window
-                    let last_line = self.imp().canvas.last_child().unwrap().last_child().unwrap();
+                    let last_line = self
+                        .imp()
+                        .canvas
+                        .last_child()
+                        .unwrap()
+                        .last_child()
+                        .unwrap();
 
                     match last_line.downcast::<TextView>() {
                         Err(_) => {
@@ -224,17 +232,22 @@ impl Window {
                                 .build();
 
                             let buffer = TextBuffer::builder().text(content).build();
-
                             text_obj.set_buffer(Some(&buffer));
 
                             text_obj.add_css_class("monospace");
                             self.imp().canvas.append(&text_obj);
+
+                            // This is my hacky solution to the problem of single preformatted
+                            // lines (if there arent any multi line code blocks in the rest of the
+                            // document) not rendering properly until the window is resized
+                            text_obj.set_height_request(20);
                         }
                         Ok(text_view) => {
-                            text_view.buffer().insert_at_cursor(format!("\n{}", content).as_str());
+                            text_view
+                                .buffer()
+                                .insert_at_cursor(format!("\n{}", content).as_str());
                         }
                     }
-
                 }
 
                 SeparatorLine => {
@@ -353,6 +366,110 @@ impl Window {
                 }
                 _ => (),
             }
+        }
+
+        match document.footer {
+            Some(footer) => {
+                let footer_separator = Separator::builder().margin_top(26).build();
+                println!("Previous line is the separator");
+                self.imp().canvas.append(&footer_separator);
+
+                for line in footer {
+                    use crate::athn_document::line_types::FooterLine::*;
+
+                    match line {
+                        TextLine(content) => {
+                            // Change ATHN formatting into pango markup
+                            let content: String = content
+                                .as_str()
+                                .split("\\r")
+                                .map(|s| {
+                                    // The whole thing with the vector with sorting and filtering and stuff
+                                    // is needed because pango needs the end tags to be in the reverse
+                                    // order of the start tags
+                                    let mut states = vec![
+                                        ("</b>", s.find("\\b")),
+                                        ("</i>", s.find("\\i")),
+                                        ("</tt>", s.find("\\p")),
+                                    ]
+                                    .iter()
+                                    .filter_map(|state| match state.1 {
+                                        None => None,
+                                        Some(n) => Some((state.0, n)),
+                                    })
+                                    .collect::<Vec<(&str, usize)>>();
+
+                                    // This is probably not the most efficient way to do this
+                                    let s = s.replace("<", "&lt;"); // Escape pango markup in original line
+                                    let s = s.replacen("\\b", "<b>", 1);
+                                    let s = s.replacen("\\i", "<i>", 1);
+                                    let s = s.replacen("\\p", "<tt>", 1);
+                                    let s = s.replace("\\b", "");
+                                    let s = s.replace("\\i", "");
+                                    let mut s = s.replace("\\p", "");
+
+                                    states.sort_unstable_by_key(|k| k.1);
+                                    states.reverse();
+                                    s.push_str(
+                                        states
+                                            .iter()
+                                            .map(|state| state.0.to_owned())
+                                            .collect::<String>()
+                                            .as_str(),
+                                    );
+
+                                    s
+                                })
+                                .collect();
+
+                            let text_obj = Label::builder()
+                                .label(content)
+                                .halign(gtk::Align::Start)
+                                .use_markup(true)
+                                .wrap(true)
+                                .wrap_mode(gtk::pango::WrapMode::WordChar)
+                                .build();
+
+                            self.imp().canvas.append(&text_obj);
+                        }
+
+                        LinkLine(crate::athn_document::line_types::Link { url, label }) => {
+                            let url_parsed = match Url::parse(&url) {
+                                Ok(u) => Some(u),
+                                Err(url::ParseError::RelativeUrlWithoutBase) => {
+                                    Some(base_url.join(&url).unwrap())
+                                }
+                                Err(_) => None,
+                            };
+
+                            let true_label = if label.is_none() {
+                                url
+                            } else {
+                                label.unwrap_or_default()
+                            };
+
+                            let link_obj = Label::builder()
+                                .label(match url_parsed {
+                                    Some(url_parsed) => {
+                                        format!("<a href=\"{}\">{}</a>", url_parsed, true_label,)
+                                    }
+                                    None => format!(
+                                        "<a href=\"\">{}</a> <i>(Invalid URL)</i>",
+                                        true_label
+                                    ),
+                                })
+                                .use_markup(true)
+                                .halign(gtk::Align::Start)
+                                .wrap(true)
+                                .wrap_mode(gtk::pango::WrapMode::WordChar)
+                                .build();
+
+                            self.imp().canvas.append(&link_obj);
+                        }
+                    }
+                }
+            }
+            None => (),
         }
     }
 }
