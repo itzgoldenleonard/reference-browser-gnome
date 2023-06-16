@@ -7,7 +7,7 @@ use line_types::*;
 pub struct Document {
     pub metadata: Metadata,
     pub main: Vec<MainLine>,
-    pub header: Option<Vec<HeaderLine>>,
+    pub header: Option<Vec<Link>>,
     pub footer: Option<Vec<FooterLine>>,
 }
 
@@ -21,7 +21,7 @@ impl Document {
 pub struct DocumentBuilder {
     pub metadata: MetadataBuilder,
     main: Vec<MainLine>,
-    header: Option<Vec<HeaderLine>>,
+    header: Option<Vec<Link>>,
     footer: Option<Vec<FooterLine>>,
 }
 
@@ -164,7 +164,7 @@ pub fn parse(
                     None => Err("Invalid header line encountered"),
                     Some((_, val)) => parse(
                         line,
-                        builder.add_header_line(HeaderLine::LinkLine(val.into())),
+                        builder.add_header_line(val.into()),
                         state,
                     ),
                 },
@@ -268,7 +268,7 @@ impl DocumentBuilder {
         self
     }
 
-    pub fn add_header_line(mut self, line: HeaderLine) -> DocumentBuilder {
+    pub fn add_header_line(mut self, line: Link) -> DocumentBuilder {
         match self.header.as_mut() {
             None => self.header = Some(vec![line]),
             Some(v) => v.push(line),

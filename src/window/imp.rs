@@ -6,7 +6,6 @@ use glib::subclass::InitializingObject;
 use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry};
 use url::Url;
 
-// Object holding the state
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/org/athn/browser/gnome/window.ui")]
 pub struct Window {
@@ -20,10 +19,9 @@ pub struct Window {
     pub canvas: TemplateChild<ListBox>,
 }
 
-// The central trait for subclassing a GObject
+// Boilerplate
 #[glib::object_subclass]
 impl ObjectSubclass for Window {
-    // `NAME` needs to match `class` attribute of template
     const NAME: &'static str = "AthnBrowserAppWindow";
     type Type = super::Window;
     type ParentType = adw::ApplicationWindow;
@@ -102,41 +100,29 @@ impl Window {
 
     #[template_callback]
     fn on_header_entry_activated(&self, row: &gtk::ListBoxRow) {
-        let header_entry = match row.child() {
-            None => {
-                eprintln!("A ListBoxRow without a child was clicked in the 'header' ListBox. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues");
-                return;
-            }
-            Some(child) => match child.downcast::<Label>() {
-                Err(_) => return,
-                Ok(h) => h,
-            },
+        let row_label = match row.child().and_downcast::<Label>() {
+            Some(row_label) => row_label,
+            None => return eprintln!("A ListBoxRow without a Label in the 'header' ListBox was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues"),
         };
+        let entry_url = match row_label.tooltip_text() {
+            Some(entry_url) => entry_url,
+            None => return eprintln!("A header entry without a url in its tooltip was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues"),
+        };
+        self.go_to_url(&entry_url);
+    }
 
-        let navigate_to = match header_entry.tooltip_text() {
-            Some(v) => v,
-            None => {
-                eprintln!("A header entry without a url in its tooltip was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues");
-                return;
-            }
-        };
+    fn go_to_url(&self, url: &str) {
+        // This function doesnt check the url's validity, it would be a good idea to do that before
+        // calling this
         self.search_entry.delete_text(0, i32::MAX);
-        self.search_entry.insert_text(&navigate_to, &mut 0);
+        self.search_entry.insert_text(url, &mut 0);
         self.search_entry.emit_activate();
     }
 }
 
-// Trait shared by all GObjects
+// More boilerplate
 impl ObjectImpl for Window {}
-
-// Trait shared by all widgets
 impl WidgetImpl for Window {}
-
-// Trait shared by all windows
 impl WindowImpl for Window {}
-
 impl ApplicationWindowImpl for Window {}
-
-// Trait shared by all adw application windows
 impl AdwApplicationWindowImpl for Window {}
-

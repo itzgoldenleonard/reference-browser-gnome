@@ -15,11 +15,6 @@ pub enum MainLine {
 }
 
 #[derive(PartialEq, Debug)]
-pub enum HeaderLine {
-    LinkLine(Link),
-}
-
-#[derive(PartialEq, Debug)]
 pub enum FooterLine {
     LinkLine(Link),
     TextLine(String),

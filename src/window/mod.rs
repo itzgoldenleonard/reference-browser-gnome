@@ -1,11 +1,13 @@
 mod imp;
 
-use crate::athn_document::Document;
+use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use adw::{ActionRow, Application, ExpanderRow};
-use glib::Object;
-use gtk::{gio, glib, Label, ListBox, ListBoxRow, Separator, TextBuffer, TextView};
+use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
+use glib::{GString, Object};
+use gtk::{
+    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, TextBuffer, TextView,
+};
 use url::Url;
 
 glib::wrapper! {
@@ -15,536 +17,441 @@ glib::wrapper! {
                     gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
+fn clear_list_box(list_box: &ListBox) {
+    // When I gtk4.12 I can use this https://docs.gtk.org/gtk4/method.ListBox.remove_all.html
+    let original_selection_mode = list_box.selection_mode();
+
+    list_box.set_selection_mode(gtk::SelectionMode::Multiple);
+    list_box.select_all();
+    for widget in list_box.selected_rows() {
+        list_box.remove(&widget);
+    }
+    list_box.set_selection_mode(original_selection_mode);
+}
+
+fn create_document_title(title: impl Into<GString>) -> Label {
+    let widget = Label::builder()
+        .label(title)
+        .halign(gtk::Align::Start)
+        .build();
+    widget.add_css_class("large-title");
+    widget
+}
+
+fn format_author_string(author_list: Option<Vec<String>>) -> Option<String> {
+    let author_list = author_list?;
+    Some(format!(
+        "By: {}",
+        author_list.iter().fold(String::new(), |acc, val| {
+            if acc.is_empty() {
+                val.to_owned()
+            } else {
+                format!("{acc}, {val}")
+            }
+        })
+    ))
+}
+
+fn format_license_string(license_list: Option<Vec<String>>) -> Option<String> {
+    let license_list = license_list?;
+    Some(format!(
+        "License{}: {}",
+        if license_list.len() > 1 { "s" } else { "" },
+        license_list.iter().fold(String::new(), |acc, val| {
+            if acc.is_empty() {
+                val.to_owned()
+            } else {
+                format!("{acc}, {val}")
+            }
+        })
+    ))
+}
+
+fn create_metaline(author: Option<Vec<String>>, license: Option<Vec<String>>) -> Option<Label> {
+    if author.is_none() && license.is_none() {
+        return None;
+    };
+
+    let author_string = format_author_string(author);
+    let license_string = format_license_string(license);
+    let both_are_some = license_string.is_some() && author_string.is_some();
+
+    let label = format!(
+        "{}{}{}",
+        author_string.unwrap_or_default(),
+        if both_are_some { ". " } else { "" },
+        license_string.unwrap_or_default()
+    );
+
+    Some(
+        Label::builder()
+            .label(label)
+            .halign(gtk::Align::Start)
+            .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::WordChar)
+            .build(),
+    )
+}
+
+fn create_subtitle(subtitle: Option<String>) -> Option<Label> {
+    Some(
+        Label::builder()
+            .label(subtitle?)
+            .halign(gtk::Align::Start)
+            .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::WordChar)
+            .build(),
+    )
+}
+
+fn escape_pango_markup(s: String) -> String {
+    s.replace("<", "&lt;")
+}
+
+fn convert_athn_formatting_to_pango(content: String) -> String {
+    //TODO: Perhaps make this a little less monolithic, that escaping pango markup could be a good
+    //function to have
+    content
+        .as_str()
+        .split("\\r")
+        .map(|s| {
+            // The whole thing with the vector with sorting and filtering and stuff
+            // is needed because pango needs the end tags to be in the reverse
+            // order of the start tags
+            let mut states = vec![
+                ("</b>", s.find("\\b")),
+                ("</i>", s.find("\\i")),
+                ("</tt>", s.find("\\p")),
+            ]
+            .iter()
+            .filter_map(|state| match state.1 {
+                None => None,
+                Some(n) => Some((state.0, n)),
+            })
+            .collect::<Vec<(&str, usize)>>();
+
+            // This is probably not the most efficient way to do this
+            let s = escape_pango_markup(s.into());
+            let s = s.replacen("\\b", "<b>", 1);
+            let s = s.replacen("\\i", "<i>", 1);
+            let s = s.replacen("\\p", "<tt>", 1);
+            let s = s.replace("\\b", "");
+            let s = s.replace("\\i", "");
+            let mut s = s.replace("\\p", "");
+
+            states.sort_unstable_by_key(|k| k.1);
+            states.reverse();
+            s.push_str(
+                states
+                    .iter()
+                    .map(|state| state.0.to_owned())
+                    .collect::<String>()
+                    .as_str(),
+            );
+
+            s
+        })
+        .collect()
+}
+
+fn create_text_line(content: String) -> Label {
+    let content = convert_athn_formatting_to_pango(content);
+    Label::builder()
+        .label(content)
+        .halign(gtk::Align::Start)
+        .use_markup(true)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .build()
+}
+
+fn validate_url(url: &String, base_url: &Url) -> Result<String, url::ParseError> {
+    let url_may_be_relative = Url::parse(url);
+    if url_may_be_relative == Err(url::ParseError::RelativeUrlWithoutBase) {
+        base_url.join(url).map(|u| u.into())
+    } else {
+        url_may_be_relative.map(|u| u.into())
+    }
+}
+
+fn create_link_line(link: line_types::Link, base_url: &Url) -> Label {
+    let label = link.label.unwrap_or(link.url.clone());
+    let label = escape_pango_markup(label);
+
+    let url = validate_url(&link.url, base_url);
+    let url_is_invalid = url.is_err();
+
+    let label_markup = format!(
+        "<a href=\"{}\">{}</a>",
+        url.clone().unwrap_or_default(),
+        label
+    );
+    let tooltip: String = url.unwrap_or("Broken url".into());
+
+    let widget = Label::builder()
+        .label(label_markup)
+        .use_markup(true)
+        .tooltip_text(tooltip)
+        .halign(gtk::Align::Start)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .build();
+    if url_is_invalid {
+        widget.add_css_class("dim-label");
+    }
+    widget
+}
+
+fn create_code_block(content: String) -> TextView {
+    let buffer = TextBuffer::builder().text(content).build();
+
+    let widget = TextView::builder()
+        .editable(false)
+        .monospace(true)
+        .cursor_visible(false)
+        .build();
+    widget.set_buffer(Some(&buffer));
+    widget.add_css_class("monospace");
+    // This is my hacky solution to the problem of single preformatted
+    // lines (if there arent any multi line code blocks in the rest of the
+    // document) not rendering properly until the window is resized
+    widget.set_height_request(20);
+    widget
+}
+
+fn calculate_indentation_value(level: line_types::Level) -> i32 {
+    // TODO: It's probably not a good idea to use a fixed number like this for indentation
+    use line_types::Level::*;
+    let level = match level {
+        One => 1,
+        Two => 2,
+        Three => 3,
+        Four => 4,
+        Five => 5,
+        Six => 6,
+    };
+    level * 12
+}
+
+fn create_ulist_line(level: line_types::Level, content: String) -> Label {
+    Label::builder()
+        .label(format!("• {}", content))
+        .halign(gtk::Align::Start)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .margin_start(calculate_indentation_value(level))
+        .build()
+}
+
+fn calculate_indentation_value_with_bullet(level: line_types::Level, bullet: String) -> i32 {
+    let bullet_width = 5 * bullet.len() as i32; // TODO: Crude approximation, could definitely be better
+    std::cmp::max(calculate_indentation_value(level) - bullet_width, 0)
+}
+
+fn create_olist_line(level: line_types::Level, bullet: String, content: String) -> Label {
+    Label::builder()
+        .label(format!("{} {}", bullet, content))
+        .halign(gtk::Align::Start)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .margin_start(calculate_indentation_value_with_bullet(level, bullet))
+        .build()
+}
+
+fn create_dropdown_line(label: String, content: String) -> ListBox {
+    let widget = ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .build();
+    widget.add_css_class("boxed-list");
+
+    let expander = ExpanderRow::builder().title(label).build();
+    let content_row = ActionRow::builder().title_lines(0).title(content).build();
+    expander.add_row(&content_row);
+    widget.append(&expander);
+    widget
+}
+
+fn create_admonition_line(type_: line_types::AdmonitionType, content: String) -> gtk::Button {
+    use line_types::AdmonitionType::*;
+
+    let label = ButtonContent::builder()
+        .label(content)
+        .icon_name(match type_ {
+            //TODO: Add proper icons
+            Note => "question-symbolic",
+            Warning => "warning-symbolic",
+            Danger => "error-symbolic",
+        })
+        .build();
+
+    if let Some(l) = label.last_child().and_downcast::<Label>() {
+        l.set_wrap(true);
+    }
+
+    let widget = gtk::Button::builder()
+        .child(&label)
+        .can_focus(false)
+        .can_target(false)
+        .focus_on_click(false)
+        .focusable(false)
+        .build();
+
+    match type_ {
+        Warning => widget.add_css_class("warning"),
+        Danger => widget.add_css_class("error"),
+        _ => (),
+    }
+    widget
+}
+
+fn create_heading_line(level: line_types::Level, content: String) -> Label {
+    let widget = Label::builder()
+        .label(content)
+        .halign(gtk::Align::Start)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .build();
+    use line_types::Level::*;
+    let heading_class = match level {
+        One => "title-1",
+        Two => "title-2",
+        Three => "title-3",
+        Four => "title-4",
+        Five => "heading",
+        Six => "caption-heading",
+    };
+    widget.add_css_class(heading_class);
+    widget
+}
+
+fn create_quote_line(content: String) -> Label {
+    Label::builder()
+        .label(format!("“<i>{}</i>”", escape_pango_markup(content)))
+        .halign(gtk::Align::Start)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .use_markup(true)
+        .build()
+}
+
+fn create_header_entry(link: line_types::Link, base_url: &Url) -> ListBoxRow {
+    let label = link.label.unwrap_or(link.url.clone());
+    let url = validate_url(&link.url, base_url);
+    let url_is_invalid = url.is_err();
+
+    let label_widget = Label::builder()
+        .label(label)
+        .tooltip_text(match url {
+            Ok(url) => url,
+            Err(_) => "Broken url".into(),
+        })
+        .wrap(true)
+        .build();
+
+    let row = ListBoxRow::builder()
+        .child(&label_widget)
+        .activatable(!url_is_invalid)
+        .build();
+    if url_is_invalid {
+        row.add_css_class("dim-label");
+    }
+
+    row
+}
+
 impl Window {
     pub fn new(app: &Application) -> Self {
-        // Create new window
         Object::builder().property("application", app).build()
     }
 
     pub fn render(&self, document: Document, base_url: Url) {
-        // Clear the screen
-        // When I gtk4.12 I can use this https://docs.gtk.org/gtk4/method.ListBox.remove_all.html
+        clear_list_box(&self.imp().canvas);
+        clear_list_box(&self.imp().header);
+
+        self.render_metadata(document.metadata);
+
+        for line in document.main {
+            self.render_main_line(line, &base_url);
+        }
+
+        if let Some(header) = document.header {
+            for line in header {
+                self.imp()
+                    .header
+                    .append(&create_header_entry(line, &base_url));
+            }
+        }
+
+        if let Some(footer) = document.footer {
+            self.render_footer_section(footer, &base_url);
+        }
+    }
+
+    fn render_footer_section(&self, footer: Vec<line_types::FooterLine>, base_url: &Url) {
+        use crate::athn_document::line_types::FooterLine::*;
+
+        let footer_separator = Separator::builder().margin_top(26).build();
+        self.imp().canvas.append(&footer_separator);
+
+        for line in footer {
+            match line {
+                TextLine(content) => self.imp().canvas.append(&create_text_line(content)),
+                LinkLine(link) => self.imp().canvas.append(&create_link_line(link, base_url)),
+            }
+        }
+    }
+
+    fn current_code_block(&self) -> Option<TextView> {
+        // Returns the code block at the end of the canvas, returns 'None' if the last child of the canvas is not a code block
         self.imp()
             .canvas
-            .set_selection_mode(gtk::SelectionMode::Multiple);
-        self.imp().canvas.select_all();
-        for widget in self.imp().canvas.selected_rows() {
-            self.imp().canvas.remove(&widget);
+            .last_child()?
+            .last_child()
+            .and_downcast::<TextView>()
+    }
+
+    fn render_main_line(&self, line: MainLine, base_url: &Url) {
+        use MainLine::*;
+        macro_rules! append {
+            ($x:expr) => {
+                self.imp().canvas.append(&$x)
+            };
         }
+        match line {
+            TextLine(content) => append!(create_text_line(content)),
+            LinkLine(link) => append!(create_link_line(link, base_url)),
+            PreformattedLine(_, content) => match self.current_code_block() {
+                None => append!(create_code_block(content)),
+                Some(code_block) => {
+                    code_block
+                        .buffer()
+                        .insert_at_cursor(format!("\n{}", content).as_str());
+                }
+            },
+            SeparatorLine => append!(Separator::new(Horizontal)),
+            UListLine(level, content) => append!(create_ulist_line(level, content)),
+            OListLine(level, bullet, content) => append!(create_olist_line(level, bullet, content)),
+            DropdownLine(label, content) => append!(create_dropdown_line(label, content)),
+            AdmonitionLine(type_, content) => append!(create_admonition_line(type_, content)),
+            HeadingLine(level, content) => append!(create_heading_line(level, content)),
+            QuoteLine(content) => append!(create_quote_line(content)),
+            _ => (),
+        }
+    }
+
+    fn render_metadata(&self, metadata: Metadata) {
         self.imp()
             .canvas
-            .set_selection_mode(gtk::SelectionMode::None);
+            .append(&create_document_title(metadata.title));
 
-        self.imp()
-            .header
-            .set_selection_mode(gtk::SelectionMode::Multiple);
-        self.imp().header.select_all();
-        for widget in self.imp().header.selected_rows() {
-            self.imp().header.remove(&widget);
-        }
-        self.imp()
-            .header
-            .set_selection_mode(gtk::SelectionMode::Single);
-
-        // Show title metadata attribute
-        let title = Label::builder()
-            .label(document.metadata.title.as_str())
-            .halign(gtk::Align::Start)
-            .build();
-        title.add_css_class("large-title");
-        self.imp().canvas.append(&title);
-
-        // Show author and license metadata attribute
-        let author_formatter = |acc: String, val: &String| {
-            if acc.is_empty() {
-                val.to_string()
-            } else {
-                format!("{acc}, {val}")
-            }
-        };
-        let license_formatter = |acc: String, val: &String| {
-            if acc.is_empty() {
-                val.to_string()
-            } else {
-                format!("{acc}, {val}")
-            }
-        };
-        match (document.metadata.author, document.metadata.license) {
-            (Some(author), Some(license)) => {
-                let metaline = Label::builder()
-                    .label(format!(
-                        "By: {}. License{}: {}",
-                        author.iter().fold(String::new(), author_formatter),
-                        if license.len() > 1 { "s" } else { "" },
-                        license.iter().fold(String::new(), license_formatter)
-                    ))
-                    .halign(gtk::Align::Start)
-                    .wrap(true)
-                    .wrap_mode(gtk::pango::WrapMode::WordChar)
-                    .build();
-                self.imp().canvas.append(&metaline);
-            }
-            (Some(author), None) => {
-                let metaline = Label::builder()
-                    .label(format!(
-                        "By: {}",
-                        author.iter().fold(String::new(), author_formatter)
-                    ))
-                    .halign(gtk::Align::Start)
-                    .wrap(true)
-                    .wrap_mode(gtk::pango::WrapMode::WordChar)
-                    .build();
-                self.imp().canvas.append(&metaline);
-            }
-            (None, Some(license)) => {
-                let metaline = Label::builder()
-                    .label(format!(
-                        "License{}: {}",
-                        if license.len() > 1 { "s" } else { "" },
-                        license.iter().fold(String::new(), license_formatter)
-                    ))
-                    .halign(gtk::Align::Start)
-                    .wrap(true)
-                    .wrap_mode(gtk::pango::WrapMode::WordChar)
-                    .build();
-                self.imp().canvas.append(&metaline);
-            }
-            (None, None) => (),
+        if let Some(metaline) = create_metaline(metadata.author, metadata.license) {
+            self.imp().canvas.append(&metaline);
         }
 
-        // Show subtitle if there is one
-        if document.metadata.subtitle.is_some() {
-            let subtitle = Label::builder()
-                .label(
-                    document
-                        .metadata
-                        .subtitle
-                        .unwrap_or("Default subtitle".to_string()),
-                )
-                .halign(gtk::Align::Start)
-                .wrap(true)
-                .wrap_mode(gtk::pango::WrapMode::WordChar)
-                .build();
+        if let Some(subtitle) = create_subtitle(metadata.subtitle) {
             self.imp().canvas.append(&subtitle);
         }
 
-        // Horizontal seperator between metadata and main sections
-        self.imp().canvas.append(&Separator::builder().build());
-
-        let level_number = |l: &crate::athn_document::line_types::Level| {
-            use crate::athn_document::line_types::Level::*;
-            match l {
-                One => 1,
-                Two => 2,
-                Three => 3,
-                Four => 4,
-                Five => 5,
-                Six => 6,
-            }
-        };
-
-        // Render main section
-        for line in document.main {
-            use crate::athn_document::line_types::MainLine::*;
-            match line {
-                TextLine(content) => {
-                    // Change ATHN formatting into pango markup
-                    let content: String = content
-                        .as_str()
-                        .split("\\r")
-                        .map(|s| {
-                            // The whole thing with the vector with sorting and filtering and stuff
-                            // is needed because pango needs the end tags to be in the reverse
-                            // order of the start tags
-                            let mut states = vec![
-                                ("</b>", s.find("\\b")),
-                                ("</i>", s.find("\\i")),
-                                ("</tt>", s.find("\\p")),
-                            ]
-                            .iter()
-                            .filter_map(|state| match state.1 {
-                                None => None,
-                                Some(n) => Some((state.0, n)),
-                            })
-                            .collect::<Vec<(&str, usize)>>();
-
-                            // This is probably not the most efficient way to do this
-                            let s = s.replace("<", "&lt;"); // Escape pango markup in original line
-                            let s = s.replacen("\\b", "<b>", 1);
-                            let s = s.replacen("\\i", "<i>", 1);
-                            let s = s.replacen("\\p", "<tt>", 1);
-                            let s = s.replace("\\b", "");
-                            let s = s.replace("\\i", "");
-                            let mut s = s.replace("\\p", "");
-
-                            states.sort_unstable_by_key(|k| k.1);
-                            states.reverse();
-                            s.push_str(
-                                states
-                                    .iter()
-                                    .map(|state| state.0.to_owned())
-                                    .collect::<String>()
-                                    .as_str(),
-                            );
-
-                            s
-                        })
-                        .collect();
-
-                    let text_obj = Label::builder()
-                        .label(content)
-                        .halign(gtk::Align::Start)
-                        .use_markup(true)
-                        .wrap(true)
-                        .wrap_mode(gtk::pango::WrapMode::WordChar)
-                        .build();
-
-                    self.imp().canvas.append(&text_obj);
-                }
-
-                LinkLine(crate::athn_document::line_types::Link { url, label }) => {
-                    let url_parsed = match Url::parse(&url) {
-                        Ok(u) => Some(u),
-                        Err(url::ParseError::RelativeUrlWithoutBase) => match base_url.join(&url) {
-                            Ok(u) => Some(u),
-                            Err(_) => None,
-                        },
-                        Err(_) => None,
-                    };
-
-                    let true_label = if label.is_none() {
-                        url
-                    } else {
-                        label.unwrap_or_default()
-                    };
-
-                    let link_obj = Label::builder()
-                        .label(match url_parsed {
-                            Some(url_parsed) => {
-                                format!("<a href=\"{}\">{}</a>", url_parsed, true_label,)
-                            }
-                            None => format!("<a href=\"\">{}</a> <i>(Invalid URL)</i>", true_label),
-                        })
-                        .use_markup(true)
-                        .halign(gtk::Align::Start)
-                        .wrap(true)
-                        .wrap_mode(gtk::pango::WrapMode::WordChar)
-                        .build();
-
-                    self.imp().canvas.append(&link_obj);
-                }
-
-                PreformattedLine(_, content) => {
-                    let last_line = || {
-                        self.imp()
-                            .canvas
-                            .last_child()?
-                            .last_child()
-                            .and_downcast::<TextView>()
-                    };
-
-                    match last_line() {
-                        None => {
-                            let text_obj = TextView::builder()
-                                .editable(false)
-                                .monospace(true)
-                                .cursor_visible(false)
-                                .build();
-
-                            let buffer = TextBuffer::builder().text(content).build();
-                            text_obj.set_buffer(Some(&buffer));
-
-                            text_obj.add_css_class("monospace");
-                            self.imp().canvas.append(&text_obj);
-
-                            // This is my hacky solution to the problem of single preformatted
-                            // lines (if there arent any multi line code blocks in the rest of the
-                            // document) not rendering properly until the window is resized
-                            text_obj.set_height_request(20);
-                        }
-                        Some(text_view) => {
-                            text_view
-                                .buffer()
-                                .insert_at_cursor(format!("\n{}", content).as_str());
-                        }
-                    }
-                }
-
-                SeparatorLine => {
-                    self.imp().canvas.append(&Separator::builder().build());
-                }
-
-                UListLine(level, content) => {
-                    let list_point_obj = Label::builder()
-                        .label(format!("• {}", content))
-                        .halign(gtk::Align::Start)
-                        .wrap(true)
-                        .wrap_mode(gtk::pango::WrapMode::WordChar)
-                        .margin_start(level_number(&level) * 12) // It's probably not a good idea to use a fixed number like this for indentation
-                        .build();
-
-                    self.imp().canvas.append(&list_point_obj);
-                }
-
-                OListLine(level, bullet, content) => {
-                    let bullet_width: i32 = 5 * bullet.len() as i32; // Crude approximation, could definitely be better
-
-                    let list_point_obj = Label::builder()
-                        .label(format!("{} {}", bullet, content))
-                        .halign(gtk::Align::Start)
-                        .wrap(true)
-                        .wrap_mode(gtk::pango::WrapMode::WordChar)
-                        .margin_start(std::cmp::max(level_number(&level) * 12 - bullet_width, 0))
-                        .build();
-
-                    self.imp().canvas.append(&list_point_obj);
-                }
-
-                DropdownLine(label, content) => {
-                    let list_box = ListBox::builder()
-                        .selection_mode(gtk::SelectionMode::None)
-                        .build();
-                    list_box.add_css_class("boxed-list");
-
-                    let content_row = ActionRow::builder().title_lines(0).title(content).build();
-
-                    let expander = ExpanderRow::builder().title(label).build();
-
-                    expander.add_row(&content_row);
-                    list_box.append(&expander);
-
-                    self.imp().canvas.append(&list_box);
-                }
-
-                AdmonitionLine(admonition_type, content) => {
-                    use crate::athn_document::line_types::AdmonitionType::*;
-
-                    let admonition_label = Label::builder()
-                        .label(format!(
-                            "{} {}",
-                            match admonition_type {
-                                // It would be better to use a proper icon, but then again it might
-                                // also be better to use something that's not a button
-                                Note => "ℹ️",
-                                Warning => "⚠️",
-                                Danger => "⛔",
-                            },
-                            content
-                        ))
-                        .halign(gtk::Align::Start)
-                        .wrap(true)
-                        .wrap_mode(gtk::pango::WrapMode::WordChar)
-                        .build();
-
-                    let admonition_obj = gtk::Button::builder()
-                        .child(&admonition_label)
-                        .can_focus(false)
-                        .can_target(false)
-                        .focus_on_click(false)
-                        .focusable(false)
-                        .build();
-
-                    match admonition_type {
-                        Warning => admonition_obj.add_css_class("warning"),
-                        Danger => admonition_obj.add_css_class("error"),
-                        _ => (),
-                    }
-
-                    self.imp().canvas.append(&admonition_obj);
-                }
-
-                HeadingLine(level, content) => {
-                    let heading_obj = Label::builder()
-                        .label(content)
-                        .halign(gtk::Align::Start)
-                        .wrap(true)
-                        .wrap_mode(gtk::pango::WrapMode::WordChar)
-                        .build();
-                    use crate::athn_document::line_types::Level::*;
-                    let heading_class = match level {
-                        One => "title-1",
-                        Two => "title-2",
-                        Three => "title-3",
-                        Four => "title-4",
-                        Five => "heading",
-                        Six => "caption-heading",
-                    };
-                    heading_obj.add_css_class(heading_class);
-                    self.imp().canvas.append(&heading_obj);
-                }
-
-                QuoteLine(content) => {
-                    let text_obj = Label::builder()
-                        .label(format!("“<i>{}</i>”", content))
-                        .halign(gtk::Align::Start)
-                        .wrap(true)
-                        .wrap_mode(gtk::pango::WrapMode::WordChar)
-                        .use_markup(true)
-                        .build();
-
-                    self.imp().canvas.append(&text_obj);
-                }
-                _ => (),
-            }
-        }
-
-        match document.header {
-            None => (),
-            Some(header) => {
-                for line in header {
-                    use crate::athn_document::line_types::HeaderLine::*;
-                    let (url, label) = match line {
-                        LinkLine(link) => (link.url, link.label),
-                    };
-
-                    let url_parsed = match Url::parse(&url) {
-                        Ok(u) => Some(u),
-                        Err(url::ParseError::RelativeUrlWithoutBase) => match base_url.join(&url) {
-                            Ok(u) => Some(u),
-                            Err(_) => None,
-                        },
-                        Err(_) => None,
-                    };
-
-                    let true_label = if label.is_none() {
-                        url
-                    } else {
-                        label.unwrap_or_default()
-                    };
-
-                    match url_parsed {
-                        Some(url_parsed) => {
-                            let text_obj = Label::builder()
-                                .label(true_label)
-                                .tooltip_text(url_parsed.as_str())
-                                .wrap(true)
-                                .build();
-
-                            self.imp().header.append(&text_obj);
-                        }
-                        None => {
-                            let text_obj = Label::builder()
-                                .label(format!("{} (Broken link)", true_label))
-                                .wrap(true)
-                                .build();
-
-                            let row = ListBoxRow::builder()
-                                .activatable(false)
-                                .child(&text_obj)
-                                .build();
-                            row.add_css_class("dim-label");
-
-                            self.imp().header.append(&row);
-                        }
-                    }
-                }
-            }
-        }
-
-        match document.footer {
-            Some(footer) => {
-                let footer_separator = Separator::builder().margin_top(26).build();
-                self.imp().canvas.append(&footer_separator);
-
-                for line in footer {
-                    use crate::athn_document::line_types::FooterLine::*;
-
-                    match line {
-                        TextLine(content) => {
-                            // Change ATHN formatting into pango markup
-                            let content: String = content
-                                .as_str()
-                                .split("\\r")
-                                .map(|s| {
-                                    // The whole thing with the vector with sorting and filtering and stuff
-                                    // is needed because pango needs the end tags to be in the reverse
-                                    // order of the start tags
-                                    let mut states = vec![
-                                        ("</b>", s.find("\\b")),
-                                        ("</i>", s.find("\\i")),
-                                        ("</tt>", s.find("\\p")),
-                                    ]
-                                    .iter()
-                                    .filter_map(|state| match state.1 {
-                                        None => None,
-                                        Some(n) => Some((state.0, n)),
-                                    })
-                                    .collect::<Vec<(&str, usize)>>();
-
-                                    // This is probably not the most efficient way to do this
-                                    let s = s.replace("<", "&lt;"); // Escape pango markup in original line
-                                    let s = s.replacen("\\b", "<b>", 1);
-                                    let s = s.replacen("\\i", "<i>", 1);
-                                    let s = s.replacen("\\p", "<tt>", 1);
-                                    let s = s.replace("\\b", "");
-                                    let s = s.replace("\\i", "");
-                                    let mut s = s.replace("\\p", "");
-
-                                    states.sort_unstable_by_key(|k| k.1);
-                                    states.reverse();
-                                    s.push_str(
-                                        states
-                                            .iter()
-                                            .map(|state| state.0.to_owned())
-                                            .collect::<String>()
-                                            .as_str(),
-                                    );
-
-                                    s
-                                })
-                                .collect();
-
-                            let text_obj = Label::builder()
-                                .label(content)
-                                .halign(gtk::Align::Start)
-                                .use_markup(true)
-                                .wrap(true)
-                                .wrap_mode(gtk::pango::WrapMode::WordChar)
-                                .build();
-
-                            self.imp().canvas.append(&text_obj);
-                        }
-
-                        LinkLine(crate::athn_document::line_types::Link { url, label }) => {
-                            let url_parsed = match Url::parse(&url) {
-                                Ok(u) => Some(u),
-                                Err(url::ParseError::RelativeUrlWithoutBase) => {
-                                    match base_url.join(&url) {
-                                        Ok(u) => Some(u),
-                                        Err(_) => None,
-                                    }
-                                }
-                                Err(_) => None,
-                            };
-
-                            let true_label = if label.is_none() {
-                                url
-                            } else {
-                                label.unwrap_or_default()
-                            };
-
-                            let link_obj = Label::builder()
-                                .label(match url_parsed {
-                                    Some(url_parsed) => {
-                                        format!("<a href=\"{}\">{}</a>", url_parsed, true_label,)
-                                    }
-                                    None => format!(
-                                        "<a href=\"\">{}</a> <i>(Invalid URL)</i>",
-                                        true_label
-                                    ),
-                                })
-                                .use_markup(true)
-                                .halign(gtk::Align::Start)
-                                .wrap(true)
-                                .wrap_mode(gtk::pango::WrapMode::WordChar)
-                                .build();
-
-                            self.imp().canvas.append(&link_obj);
-                        }
-                    }
-                }
-            }
-            None => (),
-        }
+        self.imp().canvas.append(&Separator::new(Horizontal));
     }
 }
