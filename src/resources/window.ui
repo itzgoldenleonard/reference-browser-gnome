@@ -100,17 +100,88 @@
                             </object>
                         </child>
 
-                        <!-- Canvas -->
+                        <!-- Main area -->
                         <child>
-                            <object class="GtkScrolledWindow">
-                                <property name="hscrollbar-policy">never</property>
-                                <property name="max-content-width">1000</property>
-                                <property name="vexpand">True</property>
+                            <object class="GtkStack" id="stack">
+                                <property name="transition-type">crossfade</property>
+                                <property name="transition-duration">100</property>
+                                <!-- No search yet -->
                                 <child>
-                                    <object class="GtkListBox" id="canvas">
-                                          <property name="selection-mode">none</property>
+                                    <object class="GtkStackPage">
+                                        <property name="name">start</property>
+                                        <property name="child">
+                                            <object class="AdwStatusPage">
+                                                <property name="icon-name">checkbox-checked-symbolic</property>
+                                                <property name="title">Use the search bar to load a page</property>
+                                            </object>
+                                        </property>
                                     </object>
                                 </child>
+
+                                <!-- Canvas -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">canvas</property>
+                                        <property name="child">
+                                            <object class="GtkScrolledWindow">
+                                                <property name="hscrollbar-policy">never</property>
+                                                <property name="max-content-width">1000</property>
+                                                <property name="vexpand">True</property>
+                                                <child>
+                                                    <object class="GtkListBox" id="canvas">
+                                                          <property name="selection-mode">none</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Request error -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">request-error</property>
+                                        <property name="child">
+                                            <object class="AdwStatusPage">
+                                                <property name="icon-name">error-symbolic</property>
+                                                <property name="title">There was an error with the request</property>
+                                                <property name="description">The following error message was given</property>
+                                                <property name="child">
+                                                    <object class="GtkLabel" id="request_error">
+                                                        <property name="wrap">True</property>
+                                                        <style>
+                                                            <class name="monospace" />
+                                                        </style>
+                                                    </object>
+                                                </property>
+                                            </object>
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Parse error -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">parse-error</property>
+                                        <property name="child">
+                                            <object class="AdwStatusPage">
+                                                <property name="icon-name">error-symbolic</property>
+                                                <property name="title">This is not a valid ATHN document</property>
+                                                <property name="description">The full error message has been printed to stderr</property>
+                                                <property name="child">
+                                                    <object class="GtkButton">
+                                                        <signal name="clicked" handler="on_parse_error_button_clicked" swapped="true"/>
+                                                        <property name="label">Open in external application</property>
+                                                        <style>
+                                                            <class name="suggested-action"/>
+                                                        </style>
+                                                    </object>
+                                                </property>
+                                            </object>
+                                        </property>
+                                    </object>
+                                </child>
+
                             </object>
                         </child>
                     </object>

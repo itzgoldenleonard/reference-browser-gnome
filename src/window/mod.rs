@@ -342,6 +342,9 @@ fn create_header_entry(link: line_types::Link, base_url: &Url) -> ListBoxRow {
     let label_widget = Label::builder()
         .label(label)
         .tooltip_text(match url {
+            // The function that opens the link when you click a header entry actually relies on
+            // this tooltip being the correct url, so make sure that it is either a valid absolute url that
+            // actually points to the correct place or that the row is not activatable.
             Ok(url) => url,
             Err(_) => "Broken url".into(),
         })
