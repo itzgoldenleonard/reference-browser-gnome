@@ -1,5 +1,7 @@
 # Before first draft release
 - [ ] Add ability to open files on the disk
+    - [X] By url
+    - [ ] Open with functionality
 - [ ] Add scrolling and make the lines not clickable
 - [ ] Open with functionality
 - [ ] Send a form response

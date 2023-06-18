@@ -3,10 +3,11 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Leaflet;
 use glib::subclass::InitializingObject;
-use glib::{Properties, Value, ParamSpec};
+use glib::{ParamSpec, Properties, Value};
 use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry, Stack};
-use url::Url;
 use std::cell::RefCell;
+use url::Url;
+use std::fs;
 
 #[derive(Properties, CompositeTemplate, Default)]
 #[template(resource = "/org/athn/browser/gnome/window.ui")]
@@ -47,13 +48,36 @@ impl ObjectSubclass for Window {
 }
 
 fn validate_url(url: String) -> Result<Url, url::ParseError> {
-    let has_supported_protocol = url.starts_with("https://");
+    let has_supported_protocol = url.starts_with("https://") || url.starts_with("file://");
     if has_supported_protocol {
         Url::parse(&url)
     } else {
         let url = format!("https://{}", url);
         Url::parse(&url)
     }
+}
+
+fn get_document(url: &Url) -> Result<String, String> {
+    match url.scheme() {
+        "https" => get_document_by_https(url).map_err(|e| e.to_string()),
+        "file" => get_document_by_file(url).map_err(|e| e.to_string()),
+        _ => Err("Unsupported protocol".to_string()),
+    }
+}
+
+fn get_document_by_file(url: &Url) -> Result<String, std::io::Error> {
+    // TODO: use url.to_file_path()
+    fs::read_to_string(url.path())
+}
+
+fn get_document_by_https(url: &Url) -> reqwest::Result<String> {
+    let https_client = reqwest::blocking::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()?;
+
+    let response = https_client.get(url.clone()).send()?;
+
+    response.text()
 }
 
 #[gtk::template_callbacks]
@@ -79,22 +103,10 @@ impl Window {
         };
         self.obj().set_base_url(Into::<String>::into(url.clone()));
 
-        let https_client = reqwest::blocking::Client::builder()
-            .danger_accept_invalid_certs(true)
-            .build();
-        let https_client = match https_client {
-            Err(_) => return self.set_request_error("TLS backend cannot be initialized, or the resolver cannot load the system configuration"),
-            Ok(val) => val,
-        };
-
-        let response = https_client.get(url.clone()).send();
+        let response = get_document(&url);
         let response = match response {
             Ok(val) => val,
-            Err(e) => return self.set_request_error(&e.to_string()),
-        };
-        let response = match response.text() {
-            Ok(val) => val,
-            Err(e) => return self.set_request_error(&e.to_string()),
+            Err(e) => return self.set_request_error(&e),
         };
 
         let request_time = start_time.elapsed();
