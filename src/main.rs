@@ -1,5 +1,5 @@
-mod window;
 mod athn_document;
+mod window;
 
 use adw::prelude::*;
 use adw::Application;
@@ -12,9 +12,14 @@ fn main() {
     // Register and include ui
     gio::resources_register_include!("browser.gresource").expect("Failed to register resources.");
 
-    let application = Application::builder().application_id(APP_ID).build();
+    let application = Application::builder()
+        .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::HANDLES_OPEN)
+        .build();
 
     application.connect_activate(build_ui);
+
+    application.connect_open(open_file);
 
     application.run();
 }
@@ -22,6 +27,15 @@ fn main() {
 fn build_ui(app: &Application) {
     let window = Window::new(app);
     window.present();
+}
+
+fn open_file(app: &Application, files: &[gio::File], hint: &str) {
+    let first_file = &files[0];
+    let uri = first_file.uri();
+
+    let window = Window::new(app);
+    window.present();
+    window.set_base_url(uri);
 }
 
 /* Useful documentation
