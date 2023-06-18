@@ -1,9 +1,9 @@
 # Before first draft release
-- [ ] Add ability to open files on the disk
-    - [X] By url
-    - [ ] Open with functionality
 - [ ] Add scrolling and make the lines not clickable
-- [ ] Open with functionality
+    There are 2 ways to do this.
+    1. Every time you append an object to the canvas you wrap it in a ListBoxRow that isnt activatable
+    2. At the end of the function you go through all of the children of the canvas and set their activatable property to false
+
 - [ ] Send a form response
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation

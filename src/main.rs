@@ -29,13 +29,12 @@ fn build_ui(app: &Application) {
     window.present();
 }
 
-fn open_file(app: &Application, files: &[gio::File], hint: &str) {
-    let first_file = &files[0];
-    let uri = first_file.uri();
+fn open_file(app: &Application, files: &[gio::File], _hint: &str) {
+    let uri = files[0].uri();
 
     let window = Window::new(app);
     window.present();
-    window.set_base_url(uri);
+    window.set_uri(uri);
 }
 
 /* Useful documentation

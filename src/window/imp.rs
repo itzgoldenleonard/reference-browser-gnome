@@ -1,4 +1,5 @@
-use crate::athn_document::{parse, Document, ParserState};
+use crate::athn_document;
+use crate::athn_document::{Document, ParserState};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Leaflet;
@@ -25,9 +26,8 @@ pub struct Window {
     pub request_error: TemplateChild<Label>,
     #[template_child]
     pub canvas: TemplateChild<ListBox>,
-    //TODO: Make this custom property's setter do all of the request and parsing stuff
-    #[property(get, set)]
-    pub base_url: RefCell<String>,
+    #[property(get, set = Self::go_to_url)]
+    pub uri: RefCell<String>,
 }
 
 // Boilerplate
@@ -47,10 +47,10 @@ impl ObjectSubclass for Window {
     }
 }
 
-fn validate_url(url: String) -> Result<Url, url::ParseError> {
+fn validate_url(url: &str) -> Result<Url, url::ParseError> {
     let has_supported_protocol = url.starts_with("https://") || url.starts_with("file://");
     if has_supported_protocol {
-        Url::parse(&url)
+        Url::parse(url)
     } else {
         let url = format!("https://{}", url);
         Url::parse(&url)
@@ -82,37 +82,30 @@ fn get_document_by_https(url: &Url) -> reqwest::Result<String> {
 
 #[gtk::template_callbacks]
 impl Window {
-    fn set_request_error(&self, err_message: &str) {
-        self.stack.set_visible_child_name("request-error");
-        self.request_error.set_label(err_message);
-    }
-
-    fn show_parse_error(&self) {
-        self.stack.set_visible_child_name("parse-error");
-    }
-
-    #[template_callback]
-    fn on_search_entry_activate(&self, search_entry: &gtk::SearchEntry) {
+    fn go_to_url(&self, input: String) {
         self.stack.set_visible_child_name("canvas");
         let start_time = std::time::Instant::now();
 
-        let url = validate_url(search_entry.text().into());
+        self.set_search_entry_text(&input);
+
+        let url = validate_url(&input);
         let url = match url {
             Err(e) => return self.set_request_error(&e.to_string()),
             Ok(val) => val,
         };
-        self.obj().set_base_url(Into::<String>::into(url.clone()));
+
+        // Sets the actual value in the window object, syntax referenced from https://gtk-rs.org/gtk-rs-core/stable/latest/docs/glib/derive.Properties.html#example
+        *self.uri.borrow_mut() = url.to_string();
 
         let response = get_document(&url);
         let response = match response {
-            Ok(val) => val,
             Err(e) => return self.set_request_error(&e),
+            Ok(val) => val,
         };
 
         let request_time = start_time.elapsed();
 
-        // Extract and parse the athn document data from the Response and pass it to the render function
-        let document = parse(
+        let document = athn_document::parse(
             response.as_str().lines(),
             Document::builder(),
             ParserState::default(),
@@ -120,7 +113,7 @@ impl Window {
         let document = match document {
             Err(e) => {
                 eprintln!("{e}");
-                return self.show_parse_error();
+                return self.stack.set_visible_child_name("parse-error");
             }
             Ok(val) => val.build(),
         };
@@ -129,6 +122,7 @@ impl Window {
 
         self.obj().render(document, url);
 
+        // Timing stuff, dont mind me
         let total_time = start_time.elapsed();
         println!(
             "
@@ -149,11 +143,22 @@ impl Window {
         );
     }
 
+
+    fn set_request_error(&self, err_message: &str) {
+        self.stack.set_visible_child_name("request-error");
+        self.request_error.set_label(err_message);
+    }
+
+    #[template_callback]
+    fn on_search_entry_activate(&self, search_entry: &gtk::SearchEntry) {
+        self.obj().set_uri(search_entry.text());
+    }
+
     #[template_callback]
     fn on_parse_error_button_clicked(&self, _button: &gtk::Button) {
-        let uri = self.obj().base_url();
-        let launcher = gtk::UriLauncher::new(uri.as_str());
-        launcher.launch(None::<&gtk::Window>, None::<&gio::Cancellable>, |_| ());
+        let uri = self.obj().uri();
+        let launcher = gtk::UriLauncher::new(&uri);
+        launcher.launch(None::<&gtk::Window>, None::<&gtk::gio::Cancellable>, |_| ());
     }
 
     #[template_callback]
@@ -176,15 +181,12 @@ impl Window {
             Some(entry_url) => entry_url,
             None => return eprintln!("A header entry without a url in its tooltip was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues"),
         };
-        self.go_to_url(&entry_url);
+        self.obj().set_uri(entry_url);
     }
 
-    fn go_to_url(&self, url: &str) {
-        // This function doesnt check the url's validity, it would be a good idea to do that before
-        // calling this
+    fn set_search_entry_text(&self, url: &str) {
         self.search_entry.delete_text(0, i32::MAX);
         self.search_entry.insert_text(url, &mut 0);
-        self.search_entry.emit_activate();
     }
 }
 
