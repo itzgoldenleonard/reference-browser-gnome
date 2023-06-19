@@ -86,7 +86,7 @@ impl Window {
         self.stack.set_visible_child_name("canvas");
         let start_time = std::time::Instant::now();
 
-        self.set_search_entry_text(&input);
+        self.search_entry.set_text(&input);
 
         let url = validate_url(&input);
         let url = match url {
@@ -182,11 +182,6 @@ impl Window {
             None => return eprintln!("A header entry without a url in its tooltip was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues"),
         };
         self.obj().set_uri(entry_url);
-    }
-
-    fn set_search_entry_text(&self, url: &str) {
-        self.search_entry.delete_text(0, i32::MAX);
-        self.search_entry.insert_text(url, &mut 0);
     }
 }
 

@@ -17,16 +17,20 @@ glib::wrapper! {
                     gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
-fn clear_list_box(list_box: &ListBox) {
-    // When I gtk4.12 I can use this https://docs.gtk.org/gtk4/method.ListBox.remove_all.html
+fn list_box_map(list_box: &ListBox, map: fn(widget: &ListBoxRow, parent: &ListBox)) {
     let original_selection_mode = list_box.selection_mode();
 
     list_box.set_selection_mode(gtk::SelectionMode::Multiple);
     list_box.select_all();
     for widget in list_box.selected_rows() {
-        list_box.remove(&widget);
+        map(&widget, list_box);
     }
     list_box.set_selection_mode(original_selection_mode);
+}
+
+fn clear_list_box(list_box: &ListBox) {
+    // When I gtk4.12 I can use this https://docs.gtk.org/gtk4/method.ListBox.remove_all.html
+    list_box_map(list_box, |widget, list_box| list_box.remove(widget))
 }
 
 fn create_document_title(title: impl Into<GString>) -> Label {
@@ -388,6 +392,8 @@ impl Window {
         if let Some(footer) = document.footer {
             self.render_footer_section(footer, &base_url);
         }
+
+        list_box_map(&self.imp().canvas, |row, _| row.set_activatable(false));
     }
 
     fn render_footer_section(&self, footer: Vec<line_types::FooterLine>, base_url: &Url) {

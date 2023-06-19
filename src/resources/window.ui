@@ -93,6 +93,7 @@
                                                 <property name="hexpand">True</property>
                                                 <property name="placeholder-text">Enter URL</property>
                                                 <signal name="activate" handler="on_search_entry_activate" swapped="true"/>
+                                                <!-- TODO: Bind the text property of this thing to the uri property of the window -->
                                             </object>
                                         </child>
                                     </object>
