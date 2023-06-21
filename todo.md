@@ -1,5 +1,8 @@
 # Before first draft release
 - [ ] Send a form response
+    - [X] Create an AthnSubmitField template
+    - [ ] Give it all of the properties and make those properties do the right things
+    - [ ] Make it actually work
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation
 - [ ] Form field validation from server

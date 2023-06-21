@@ -1,14 +1,17 @@
 mod imp;
 
 use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
+use crate::athn_document::form;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use glib::{GString, Object};
 use gtk::{
-    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, TextBuffer, TextView,
+    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, TextBuffer, TextView
 };
 use url::Url;
+// Custom widgets
+use crate::submit_field;
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
@@ -444,6 +447,19 @@ impl Window {
             AdmonitionLine(type_, content) => append!(create_admonition_line(type_, content)),
             HeadingLine(level, content) => append!(create_heading_line(level, content)),
             QuoteLine(content) => append!(create_quote_line(content)),
+            FormFieldLine(_form, line) => {
+                self.render_form_field(line);
+            }
+        }
+    }
+
+    fn render_form_field(&self, field: form::FormField) {
+        use form::FormField::*;
+        match field {
+            Submit(id, field) => {
+                let widget = submit_field::SubmitField::new(id, field);
+                self.imp().canvas.append(&widget);
+            }
             _ => (),
         }
     }
