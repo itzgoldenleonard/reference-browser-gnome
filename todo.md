@@ -1,11 +1,4 @@
 # Before first draft release
-- [ ] Send an empty write request
-    - [X] Send a POST request to the server
-    - [X] Send custom signals for error and success write requests
-    - [X] Handle those signals with a popup on the screen
-    - [ ] Handle the cases where the destination url is invalid
-    - [ ] Figure out how to properly pass data between all of the functions
-    - [ ] Get rid of any unwraps and clean up the code
 - [ ] Redirect form sections
 - [ ] Send write requests with form data
 - [ ] Render all the different form field types (of course they also have to work)

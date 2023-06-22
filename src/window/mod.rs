@@ -98,7 +98,7 @@ impl Window {
             AdmonitionLine(type_, content) => append!(create_admonition_line(type_, content)),
             HeadingLine(level, content) => append!(create_heading_line(level, content)),
             QuoteLine(content) => append!(create_quote_line(content)),
-            FormFieldLine(_form, line) => {
+            FormFieldLine(_form_id, line) => {
                 self.render_form_field(line, base_url);
             }
         }
@@ -106,36 +106,13 @@ impl Window {
 
     fn render_form_field(&self, field: form::FormField, base_url: &Url) {
         use form::FormField::*;
+        macro_rules! append {
+            ($x:expr) => {
+                self.imp().canvas.append(&$x)
+            };
+        }
         match field {
-            Submit(id, field) => {
-                let url = validate_url(&field.destination, base_url).unwrap();
-                let widget = SubmitFormField::new(id, field.label, url, field.redirect);
-
-                widget.connect_closure(
-                    "submit-success",
-                    false,
-                    closure_local!(@watch self as s => move |_button: SubmitFormField, body: std::string::String| {
-                        println!("{body}");
-                        let toast = adw::Toast::new("Successfully submitted the form");
-                        s.imp().toaster.add_toast(toast);
-                    }),
-                );
-
-                widget.connect_closure(
-                    "submit-error",
-                    false,
-                    closure_local!(@watch self as s => move |_button: SubmitFormField, message: std::string::String| {
-                        eprintln!("Failed to submit with error: {message}");
-
-                        let toast = adw::Toast::new(format!("Failed to submit with error: {message}").as_str());
-                        toast.set_timeout(0);
-                        s.imp().toaster.add_toast(toast);
-                        s.imp().toaster.last_child().unwrap().add_css_class("error");
-                    }),
-                );
-
-                self.imp().canvas.append(&widget);
-            }
+            Submit(id, field) => append!(create_submit_form_field(self, id, field, base_url)),
             _ => (),
         }
     }
@@ -155,6 +132,44 @@ impl Window {
 
         self.imp().canvas.append(&Separator::new(Horizontal));
     }
+}
+
+fn create_submit_form_field(
+    window: &Window,
+    id: form::ID,
+    field: form::SubmitField,
+    base_url: &Url,
+) -> SubmitFormField {
+    let url = validate_url(&field.destination, base_url).ok();
+
+    let widget = SubmitFormField::new(id, field.label, url, field.redirect);
+
+    widget.connect_closure(
+        "submit-success",
+        false,
+        closure_local!(@watch window => move |_button: SubmitFormField, body: std::string::String| {
+            println!("{body}");
+            let toast = adw::Toast::new("Successfully submitted the form");
+            window.imp().toaster.add_toast(toast);
+        }),
+    );
+
+    widget.connect_closure(
+        "submit-error",
+        false,
+        closure_local!(@watch window => move |_button: SubmitFormField, message: std::string::String| {
+            eprintln!("Failed to submit with error: {message}");
+
+            let toast = adw::Toast::new(format!("Failed to submit with error: {message}").as_str());
+            toast.set_timeout(0);
+            window.imp().toaster.add_toast(toast);
+            if let Some(toast_widget) = window.imp().toaster.last_child() {
+                toast_widget.add_css_class("error");
+            }
+        }),
+    );
+
+    widget
 }
 
 fn list_box_map(list_box: &ListBox, map: fn(widget: &ListBoxRow, parent: &ListBox)) {
@@ -505,4 +520,3 @@ fn create_header_entry(link: line_types::Link, base_url: &Url) -> ListBoxRow {
 
     row
 }
-

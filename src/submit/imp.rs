@@ -13,6 +13,8 @@ pub struct SubmitFormField {
     pub destination: RefCell<String>,
     #[property(get, set)]
     pub redirect: Cell<bool>,
+    #[property(get, set = Self::invalid_url_setter)]
+    pub invalid_url: Cell<bool>,
 }
 
 #[glib::object_subclass]
@@ -22,7 +24,21 @@ impl ObjectSubclass for SubmitFormField {
     type ParentType = gtk::Button;
 }
 
-impl SubmitFormField {}
+impl SubmitFormField {
+    fn invalid_url_setter(&self, input: bool) {
+        self.obj().set_can_target(!input);
+        self.obj().set_focusable(!input);
+        if input {
+            self.obj().add_css_class("dim-label");
+            self.obj()
+                .set_label("Invalid destination URL, cannot submit form");
+        } else {
+            self.obj().remove_css_class("dim-label");
+        };
+
+        self.invalid_url.set(input);
+    }
+}
 
 impl ObjectImpl for SubmitFormField {
     fn properties() -> &'static [ParamSpec] {
@@ -58,10 +74,7 @@ impl ObjectImpl for SubmitFormField {
 impl WidgetImpl for SubmitFormField {}
 impl ButtonImpl for SubmitFormField {
     fn clicked(&self) {
-        let https_client = reqwest::blocking::Client::builder()
-            .danger_accept_invalid_certs(true)
-            .build();
-        let https_client = match https_client {
+        let response = match post(self.obj().destination()) {
             Ok(val) => val,
             Err(e) => {
                 return self
@@ -70,35 +83,16 @@ impl ButtonImpl for SubmitFormField {
             }
         };
 
-        let response = https_client.post(self.obj().destination()).send();
-        let response = match response {
-            Ok(val) => val,
-            Err(e) => {
-                return self
-                    .obj()
-                    .emit_by_name::<()>("submit-error", &[&e.to_string()]);
-            }
-        };
-        let response = match response.error_for_status() {
-            Ok(val) => val,
-            Err(e) => {
-                return self
-                    .obj()
-                    .emit_by_name::<()>("submit-error", &[&e.to_string()]);
-            }
-        };
-
-
-        let body = response.text();
-        let body = match body {
-            Ok(val) => val,
-            Err(e) => {
-                return self
-                    .obj()
-                    .emit_by_name::<()>("submit-error", &[&e.to_string()]);
-            }
-        };
-
-        self.obj().emit_by_name::<()>("submit-success", &[&body]);
+        self.obj()
+            .emit_by_name::<()>("submit-success", &[&response]);
     }
+}
+
+fn post(destination: String) -> reqwest::Result<String> {
+    let https_client = reqwest::blocking::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()?;
+    let response = https_client.post(destination).send()?;
+    let response = response.error_for_status()?;
+    response.text()
 }
