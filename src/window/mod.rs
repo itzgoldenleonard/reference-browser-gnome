@@ -25,26 +25,26 @@ impl Window {
         Object::builder().property("application", app).build()
     }
 
-    pub fn render(&self, document: Document, base_url: Url) {
+    pub fn render(&self, document: Document, base_url: &Url) {
         clear_list_box(&self.imp().canvas);
         clear_list_box(&self.imp().header);
 
         self.render_metadata(document.metadata);
 
         for line in document.main {
-            self.render_main_line(line, &base_url);
+            self.render_main_line(line, base_url);
         }
 
         if let Some(header) = document.header {
             for line in header {
                 self.imp()
                     .header
-                    .append(&create_header_entry(line, &base_url));
+                    .append(&create_header_entry(line, base_url));
             }
         }
 
         if let Some(footer) = document.footer {
-            self.render_footer_section(footer, &base_url);
+            self.render_footer_section(footer, base_url);
         }
 
         list_box_map(&self.imp().canvas, |row, _| row.set_activatable(false));
@@ -147,8 +147,10 @@ fn create_submit_form_field(
     widget.connect_closure(
         "submit-success",
         false,
-        closure_local!(@watch window => move |_button: SubmitFormField, body: std::string::String| {
-            println!("{body}");
+        closure_local!(@watch window, @strong base_url => move |button: SubmitFormField, body: std::string::String| {
+            if button.redirect() {
+                window.imp().render_document(&body, &base_url);
+            };
             let toast = adw::Toast::new("Successfully submitted the form");
             window.imp().toaster.add_toast(toast);
         }),

@@ -107,8 +107,30 @@ impl Window {
 
         let request_time = start_time.elapsed();
 
+        self.render_document(&response, &url);
+
+        // Timing stuff, dont mind me
+        let total_time = start_time.elapsed();
+        println!(
+            "
+        ╭─────────────────┬─────────
+        │ Request timing breakdown:
+        ├─────────────────┼─────────
+        │ Network fetch:  │ {:?}
+        │ Rendering:      │ {:?}
+        ├─────────────────┼─────────
+        │ \x1b[1mTotal\x1b[0m           │ \x1b[1m{:?}\x1b[0m
+        ╰─────────────────┴─────────
+        ",
+            request_time,
+            total_time - request_time,
+            total_time
+        );
+    }
+
+    pub fn render_document(&self, document_string: &str, base_url: &Url) {
         let document = athn_document::parse(
-            response.as_str().lines(),
+            document_string.lines(),
             Document::builder(),
             ParserState::default(),
         );
@@ -120,31 +142,8 @@ impl Window {
             Ok(val) => val.build(),
         };
 
-        let parse_time = start_time.elapsed();
-
-        self.obj().render(document, url);
-
-        // Timing stuff, dont mind me
-        let total_time = start_time.elapsed();
-        println!(
-            "
-        ╭─────────────────┬─────────
-        │ Request timing breakdown:
-        ├─────────────────┼─────────
-        │ Network fetch:  │ {:?}
-        │ Document parse: │ {:?}
-        │ Rendering:      │ {:?}
-        ├─────────────────┼─────────
-        │ \x1b[1mTotal\x1b[0m           │ \x1b[1m{:?}\x1b[0m
-        ╰─────────────────┴─────────
-        ",
-            request_time,
-            parse_time - request_time,
-            total_time - parse_time,
-            total_time
-        );
+        self.obj().render(document, base_url);
     }
-
 
     fn set_request_error(&self, err_message: &str) {
         self.stack.set_visible_child_name("request-error");

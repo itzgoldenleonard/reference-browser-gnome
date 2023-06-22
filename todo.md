@@ -1,5 +1,4 @@
 # Before first draft release
-- [ ] Redirect form sections
 - [ ] Send write requests with form data
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation
