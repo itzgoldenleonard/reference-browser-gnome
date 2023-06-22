@@ -25,6 +25,8 @@ pub struct Window {
     #[template_child]
     pub request_error: TemplateChild<Label>,
     #[template_child]
+    pub toaster: TemplateChild<adw::ToastOverlay>,
+    #[template_child]
     pub canvas: TemplateChild<ListBox>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,

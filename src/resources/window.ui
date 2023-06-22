@@ -124,13 +124,17 @@
                                     <object class="GtkStackPage">
                                         <property name="name">canvas</property>
                                         <property name="child">
-                                            <object class="GtkScrolledWindow">
-                                                <property name="hscrollbar-policy">never</property>
-                                                <property name="max-content-width">1000</property>
-                                                <property name="vexpand">True</property>
+                                            <object class="AdwToastOverlay" id="toaster">
                                                 <child>
-                                                    <object class="GtkListBox" id="canvas">
-                                                          <property name="selection-mode">none</property>
+                                                    <object class="GtkScrolledWindow">
+                                                        <property name="hscrollbar-policy">never</property>
+                                                        <property name="max-content-width">1000</property>
+                                                        <property name="vexpand">True</property>
+                                                        <child>
+                                                            <object class="GtkListBox" id="canvas">
+                                                                  <property name="selection-mode">none</property>
+                                                            </object>
+                                                        </child>
                                                     </object>
                                                 </child>
                                             </object>

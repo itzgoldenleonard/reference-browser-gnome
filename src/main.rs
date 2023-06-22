@@ -1,6 +1,6 @@
 mod athn_document;
 mod window;
-mod submit_field;
+mod submit;
 
 use adw::prelude::*;
 use adw::Application;

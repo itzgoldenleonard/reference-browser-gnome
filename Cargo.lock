@@ -845,6 +845,7 @@ dependencies = [
  "gtk4",
  "humantime",
  "libadwaita",
+ "once_cell",
  "reqwest",
  "tuple",
  "url",

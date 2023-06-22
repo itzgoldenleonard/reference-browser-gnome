@@ -1,12 +1,16 @@
 # Before first draft release
-- [ ] Send a form response
-    - [X] Create an AthnSubmitField template
-    - [ ] Give it all of the properties and make those properties do the right things
-    - [ ] Make it actually work
+- [ ] Send an empty write request
+    - [X] Send a POST request to the server
+    - [X] Send custom signals for error and success write requests
+    - [X] Handle those signals with a popup on the screen
+    - [ ] Handle the cases where the destination url is invalid
+    - [ ] Figure out how to properly pass data between all of the functions
+    - [ ] Get rid of any unwraps and clean up the code
+- [ ] Redirect form sections
+- [ ] Send write requests with form data
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation
 - [ ] Form field validation from server
-- [ ] Redirect form sections
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Add an option to use a custom language preference list
 - [ ] Submit to flathub

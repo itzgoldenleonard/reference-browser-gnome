@@ -1,23 +1,160 @@
 mod imp;
 
-use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
 use crate::athn_document::form;
+use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
-use glib::{GString, Object};
+use glib::{closure_local, GString, Object};
 use gtk::{
-    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, TextBuffer, TextView
+    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, TextBuffer, TextView,
 };
 use url::Url;
 // Custom widgets
-use crate::submit_field;
+use crate::submit::SubmitFormField;
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
         @extends adw::ApplicationWindow, gtk::ApplicationWindow, gtk::Window, gtk::Widget,
         @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable,
                     gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
+}
+
+impl Window {
+    pub fn new(app: &Application) -> Self {
+        Object::builder().property("application", app).build()
+    }
+
+    pub fn render(&self, document: Document, base_url: Url) {
+        clear_list_box(&self.imp().canvas);
+        clear_list_box(&self.imp().header);
+
+        self.render_metadata(document.metadata);
+
+        for line in document.main {
+            self.render_main_line(line, &base_url);
+        }
+
+        if let Some(header) = document.header {
+            for line in header {
+                self.imp()
+                    .header
+                    .append(&create_header_entry(line, &base_url));
+            }
+        }
+
+        if let Some(footer) = document.footer {
+            self.render_footer_section(footer, &base_url);
+        }
+
+        list_box_map(&self.imp().canvas, |row, _| row.set_activatable(false));
+    }
+
+    fn render_footer_section(&self, footer: Vec<line_types::FooterLine>, base_url: &Url) {
+        use crate::athn_document::line_types::FooterLine::*;
+
+        let footer_separator = Separator::builder().margin_top(26).build();
+        self.imp().canvas.append(&footer_separator);
+
+        for line in footer {
+            match line {
+                TextLine(content) => self.imp().canvas.append(&create_text_line(content)),
+                LinkLine(link) => self.imp().canvas.append(&create_link_line(link, base_url)),
+            }
+        }
+    }
+
+    fn current_code_block(&self) -> Option<TextView> {
+        // Returns the code block at the end of the canvas, returns 'None' if the last child of the canvas is not a code block
+        self.imp()
+            .canvas
+            .last_child()?
+            .last_child()
+            .and_downcast::<TextView>()
+    }
+
+    fn render_main_line(&self, line: MainLine, base_url: &Url) {
+        use MainLine::*;
+        macro_rules! append {
+            ($x:expr) => {
+                self.imp().canvas.append(&$x)
+            };
+        }
+        match line {
+            TextLine(content) => append!(create_text_line(content)),
+            LinkLine(link) => append!(create_link_line(link, base_url)),
+            PreformattedLine(_, content) => match self.current_code_block() {
+                None => append!(create_code_block(content)),
+                Some(code_block) => {
+                    code_block
+                        .buffer()
+                        .insert_at_cursor(format!("\n{}", content).as_str());
+                }
+            },
+            SeparatorLine => append!(Separator::new(Horizontal)),
+            UListLine(level, content) => append!(create_ulist_line(level, content)),
+            OListLine(level, bullet, content) => append!(create_olist_line(level, bullet, content)),
+            DropdownLine(label, content) => append!(create_dropdown_line(label, content)),
+            AdmonitionLine(type_, content) => append!(create_admonition_line(type_, content)),
+            HeadingLine(level, content) => append!(create_heading_line(level, content)),
+            QuoteLine(content) => append!(create_quote_line(content)),
+            FormFieldLine(_form, line) => {
+                self.render_form_field(line, base_url);
+            }
+        }
+    }
+
+    fn render_form_field(&self, field: form::FormField, base_url: &Url) {
+        use form::FormField::*;
+        match field {
+            Submit(id, field) => {
+                let url = validate_url(&field.destination, base_url).unwrap();
+                let widget = SubmitFormField::new(id, field.label, url, field.redirect);
+
+                widget.connect_closure(
+                    "submit-success",
+                    false,
+                    closure_local!(@watch self as s => move |_button: SubmitFormField, body: std::string::String| {
+                        println!("{body}");
+                        let toast = adw::Toast::new("Successfully submitted the form");
+                        s.imp().toaster.add_toast(toast);
+                    }),
+                );
+
+                widget.connect_closure(
+                    "submit-error",
+                    false,
+                    closure_local!(@watch self as s => move |_button: SubmitFormField, message: std::string::String| {
+                        eprintln!("Failed to submit with error: {message}");
+
+                        let toast = adw::Toast::new(format!("Failed to submit with error: {message}").as_str());
+                        toast.set_timeout(0);
+                        s.imp().toaster.add_toast(toast);
+                        s.imp().toaster.last_child().unwrap().add_css_class("error");
+                    }),
+                );
+
+                self.imp().canvas.append(&widget);
+            }
+            _ => (),
+        }
+    }
+
+    fn render_metadata(&self, metadata: Metadata) {
+        self.imp()
+            .canvas
+            .append(&create_document_title(metadata.title));
+
+        if let Some(metaline) = create_metaline(metadata.author, metadata.license) {
+            self.imp().canvas.append(&metaline);
+        }
+
+        if let Some(subtitle) = create_subtitle(metadata.subtitle) {
+            self.imp().canvas.append(&subtitle);
+        }
+
+        self.imp().canvas.append(&Separator::new(Horizontal));
+    }
 }
 
 fn list_box_map(list_box: &ListBox, map: fn(widget: &ListBoxRow, parent: &ListBox)) {
@@ -369,114 +506,3 @@ fn create_header_entry(link: line_types::Link, base_url: &Url) -> ListBoxRow {
     row
 }
 
-impl Window {
-    pub fn new(app: &Application) -> Self {
-        Object::builder().property("application", app).build()
-    }
-
-    pub fn render(&self, document: Document, base_url: Url) {
-        clear_list_box(&self.imp().canvas);
-        clear_list_box(&self.imp().header);
-
-        self.render_metadata(document.metadata);
-
-        for line in document.main {
-            self.render_main_line(line, &base_url);
-        }
-
-        if let Some(header) = document.header {
-            for line in header {
-                self.imp()
-                    .header
-                    .append(&create_header_entry(line, &base_url));
-            }
-        }
-
-        if let Some(footer) = document.footer {
-            self.render_footer_section(footer, &base_url);
-        }
-
-        list_box_map(&self.imp().canvas, |row, _| row.set_activatable(false));
-    }
-
-    fn render_footer_section(&self, footer: Vec<line_types::FooterLine>, base_url: &Url) {
-        use crate::athn_document::line_types::FooterLine::*;
-
-        let footer_separator = Separator::builder().margin_top(26).build();
-        self.imp().canvas.append(&footer_separator);
-
-        for line in footer {
-            match line {
-                TextLine(content) => self.imp().canvas.append(&create_text_line(content)),
-                LinkLine(link) => self.imp().canvas.append(&create_link_line(link, base_url)),
-            }
-        }
-    }
-
-    fn current_code_block(&self) -> Option<TextView> {
-        // Returns the code block at the end of the canvas, returns 'None' if the last child of the canvas is not a code block
-        self.imp()
-            .canvas
-            .last_child()?
-            .last_child()
-            .and_downcast::<TextView>()
-    }
-
-    fn render_main_line(&self, line: MainLine, base_url: &Url) {
-        use MainLine::*;
-        macro_rules! append {
-            ($x:expr) => {
-                self.imp().canvas.append(&$x)
-            };
-        }
-        match line {
-            TextLine(content) => append!(create_text_line(content)),
-            LinkLine(link) => append!(create_link_line(link, base_url)),
-            PreformattedLine(_, content) => match self.current_code_block() {
-                None => append!(create_code_block(content)),
-                Some(code_block) => {
-                    code_block
-                        .buffer()
-                        .insert_at_cursor(format!("\n{}", content).as_str());
-                }
-            },
-            SeparatorLine => append!(Separator::new(Horizontal)),
-            UListLine(level, content) => append!(create_ulist_line(level, content)),
-            OListLine(level, bullet, content) => append!(create_olist_line(level, bullet, content)),
-            DropdownLine(label, content) => append!(create_dropdown_line(label, content)),
-            AdmonitionLine(type_, content) => append!(create_admonition_line(type_, content)),
-            HeadingLine(level, content) => append!(create_heading_line(level, content)),
-            QuoteLine(content) => append!(create_quote_line(content)),
-            FormFieldLine(_form, line) => {
-                self.render_form_field(line);
-            }
-        }
-    }
-
-    fn render_form_field(&self, field: form::FormField) {
-        use form::FormField::*;
-        match field {
-            Submit(id, field) => {
-                let widget = submit_field::SubmitField::new(id, field);
-                self.imp().canvas.append(&widget);
-            }
-            _ => (),
-        }
-    }
-
-    fn render_metadata(&self, metadata: Metadata) {
-        self.imp()
-            .canvas
-            .append(&create_document_title(metadata.title));
-
-        if let Some(metaline) = create_metaline(metadata.author, metadata.license) {
-            self.imp().canvas.append(&metaline);
-        }
-
-        if let Some(subtitle) = create_subtitle(metadata.subtitle) {
-            self.imp().canvas.append(&subtitle);
-        }
-
-        self.imp().canvas.append(&Separator::new(Horizontal));
-    }
-}
