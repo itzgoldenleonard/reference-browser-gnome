@@ -17,7 +17,7 @@ pub enum FormField {
 }
 
 // Helper structs
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct ID {
     id: String,
 }

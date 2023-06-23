@@ -7,7 +7,8 @@ use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use glib::{closure_local, GString, Object};
 use gtk::{
-    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, TextBuffer, TextView,
+    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, SpinButton,
+    TextBuffer, TextView,
 };
 use url::Url;
 // Custom widgets
@@ -113,6 +114,7 @@ impl Window {
         }
         match field {
             Submit(id, field) => append!(create_submit_form_field(self, id, field, base_url)),
+            Integer(id, field) => append!(create_submit_int_field(self, id, field)),
             _ => (),
         }
     }
@@ -134,6 +136,28 @@ impl Window {
     }
 }
 
+fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField) -> SpinButton {
+    let min = field.min.unwrap_or(i64::MIN);
+    let max = field.max.unwrap_or(i64::MAX);
+    let step = field.step.unwrap_or(1);
+
+    let widget = SpinButton::with_range(min as f64, max as f64, step as f64);
+    let default = field.global.default.unwrap_or(0);
+    *window.imp().form_data.borrow_mut() = vec![(id, Box::new(default))];
+    widget.set_value(default as f64);
+
+    widget.connect_closure(
+        "value-changed",
+        false,
+        closure_local!(@watch window => move |entry: &SpinButton| {
+            let id = window.imp().form_data.borrow()[0].0.clone();
+            window.imp().form_data.borrow_mut()[0] = (id, Box::new(entry.value_as_int()));
+        }),
+    );
+
+    widget
+}
+
 fn create_submit_form_field(
     window: &Window,
     id: form::ID,
@@ -143,6 +167,14 @@ fn create_submit_form_field(
     let url = validate_url(&field.destination, base_url).ok();
 
     let widget = SubmitFormField::new(id, field.label, url, field.redirect);
+
+    widget.connect_closure(
+        "data-request",
+        false,
+        closure_local!(@watch window => move |button: SubmitFormField| {
+            button.set_serialized_data(format!("{:?}", window.imp().form_data.borrow()[0].1));
+        }),
+    );
 
     widget.connect_closure(
         "submit-success",

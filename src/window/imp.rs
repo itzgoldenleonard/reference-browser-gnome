@@ -1,14 +1,16 @@
 use crate::athn_document;
+use crate::athn_document::form::ID;
 use crate::athn_document::{Document, ParserState};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Leaflet;
+use core::fmt::Debug;
 use glib::subclass::InitializingObject;
 use glib::{ParamSpec, Properties, Value};
 use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry, Stack};
 use std::cell::RefCell;
-use url::Url;
 use std::fs;
+use url::Url;
 
 #[derive(Properties, CompositeTemplate, Default)]
 #[template(resource = "/org/athn/browser/gnome/window.ui")]
@@ -30,6 +32,8 @@ pub struct Window {
     pub canvas: TemplateChild<ListBox>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
+    //pub form_data: Vec<(ID, Box<dyn Display>)>,
+    pub form_data: RefCell<Vec<(ID, Box<dyn Debug>)>>,
 }
 
 // Boilerplate

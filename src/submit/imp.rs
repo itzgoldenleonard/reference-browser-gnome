@@ -10,6 +10,8 @@ use std::cell::{Cell, RefCell};
 #[properties(wrapper_type = super::SubmitFormField)]
 pub struct SubmitFormField {
     #[property(get, set)]
+    pub serialized_data: RefCell<String>,
+    #[property(get, set)]
     pub destination: RefCell<String>,
     #[property(get, set)]
     pub redirect: Cell<bool>,
@@ -66,6 +68,9 @@ impl ObjectImpl for SubmitFormField {
                 Signal::builder("submit-error")
                     .param_types([String::static_type()])
                     .build(),
+                Signal::builder("data-request")
+                    //.param_types([String::static_type()])
+                    .build(),
             ]
         });
         SIGNALS.as_ref()
@@ -74,7 +79,9 @@ impl ObjectImpl for SubmitFormField {
 impl WidgetImpl for SubmitFormField {}
 impl ButtonImpl for SubmitFormField {
     fn clicked(&self) {
-        let response = match post(self.obj().destination()) {
+        self.obj().emit_by_name::<()>("data-request", &[]);
+
+        let response = match post(self.obj().destination(), self.obj().serialized_data()) {
             Ok(val) => val,
             Err(e) => {
                 return self
@@ -88,11 +95,11 @@ impl ButtonImpl for SubmitFormField {
     }
 }
 
-fn post(destination: String) -> reqwest::Result<String> {
+fn post(destination: String, body: String) -> reqwest::Result<String> {
     let https_client = reqwest::blocking::Client::builder()
         .danger_accept_invalid_certs(true)
         .build()?;
-    let response = https_client.post(destination).send()?;
+    let response = https_client.post(destination).body(body).send()?;
     let response = response.error_for_status()?;
     response.text()
 }
