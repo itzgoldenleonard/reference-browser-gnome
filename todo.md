@@ -5,8 +5,8 @@
     - [X] Get the int form field to store its input in the window
     - [X] Send and recieve write requests with body
     - [X] Get the data from the window to the SubmitFormField
-    - [ ] Make it actually respond to ids
-    - [ ] Send the data in a write request
+    - [X] Make it actually respond to ids
+    - [X] Send the data in a write request
     - [ ] Serialize the data properly
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation

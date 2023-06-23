@@ -142,20 +142,44 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
     let step = field.step.unwrap_or(1);
 
     let widget = SpinButton::with_range(min as f64, max as f64, step as f64);
+    widget.set_tooltip_text(Some(&id.id_cloned()));
+    widget.set_has_tooltip(false);
     let default = field.global.default.unwrap_or(0);
-    *window.imp().form_data.borrow_mut() = vec![(id, Box::new(default))];
+    window
+        .imp()
+        .form_data
+        .borrow_mut()
+        .append(&mut vec![(id, Box::new(default))]);
     widget.set_value(default as f64);
 
+    #[allow(unused_must_use)]
     widget.connect_closure(
         "value-changed",
         false,
         closure_local!(@watch window => move |entry: &SpinButton| {
-            let id = window.imp().form_data.borrow()[0].0.clone();
-            window.imp().form_data.borrow_mut()[0] = (id, Box::new(entry.value_as_int()));
+            let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            override_element_by_id(&mut all_data, id, Box::new(entry.value_as_int()));
         }),
     );
 
     widget
+}
+
+/// Returns an error if the id doesnt exist
+fn override_element_by_id(
+    vector: &mut Vec<(form::ID, Box<dyn core::fmt::Debug>)>,
+    id: form::ID,
+    new_value: Box<dyn core::fmt::Debug>,
+) -> Result<(), ()> {
+    let idx = vector
+        .iter()
+        .enumerate()
+        .find(|&x| x.1 .0 == id)
+        .ok_or(())?
+        .0;
+    vector[idx] = (id, new_value);
+    Ok(())
 }
 
 fn create_submit_form_field(
@@ -172,7 +196,7 @@ fn create_submit_form_field(
         "data-request",
         false,
         closure_local!(@watch window => move |button: SubmitFormField| {
-            button.set_serialized_data(format!("{:?}", window.imp().form_data.borrow()[0].1));
+            button.set_serialized_data(serialize_form_data(&window.imp().form_data.borrow()));
         }),
     );
 
@@ -204,6 +228,13 @@ fn create_submit_form_field(
     );
 
     widget
+}
+
+fn serialize_form_data(input: &Vec<(form::ID, Box<dyn core::fmt::Debug>)>) -> String {
+    input
+        .iter()
+        .map(|e| format!("\"{}\": {:?},\n", e.0.clone().id(), e.1))
+        .collect()
 }
 
 fn list_box_map(list_box: &ListBox, map: fn(widget: &ListBoxRow, parent: &ListBox)) {
