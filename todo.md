@@ -13,6 +13,9 @@
         - [X] Make the form fields use Input
         - [X] Update the function that finds an element in the form_data vector by ID to use Input
         - [ ] Implement Serialize for Input
+            - [X] Get the InputOptional enum to behave correctly
+            - [ ] Move the id out of the object (consider changing the format so that I shouldnt do that)
+            - [ ] Make value null when appropriate
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation
 - [ ] Form field validation from server

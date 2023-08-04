@@ -17,7 +17,7 @@ pub enum FormField {
 }
 
 // Helper structs
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, serde::Serialize)]
 pub struct ID {
     id: String,
 }

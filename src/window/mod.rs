@@ -3,7 +3,6 @@ mod input;
 
 use crate::athn_document::form;
 use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
-use input::*;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
@@ -12,6 +11,7 @@ use gtk::{
     gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, SpinButton,
     TextBuffer, TextView,
 };
+use input::*;
 use url::Url;
 // Custom widgets
 use crate::submit::SubmitFormField;
@@ -150,18 +150,14 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
 
     let optional = match field.global.optional {
         false => InputOptional::Required,
-        true => InputOptional::Optional(false),
+        true => InputOptional::Optional { empty: false },
     };
     let new_input_data = Input {
         id,
         value: InputTypes::Int(default),
         optional,
     };
-    window
-        .imp()
-        .form_data
-        .borrow_mut()
-        .push(new_input_data);
+    window.imp().form_data.borrow_mut().push(new_input_data);
 
     widget.set_value(default as f64);
 
@@ -185,12 +181,7 @@ fn override_element_by_id(
     id: form::ID,
     new_value: InputTypes,
 ) -> Result<(), ()> {
-    let idx = vector
-        .iter()
-        .enumerate()
-        .find(|&x| *x.1 == id)
-        .ok_or(())?
-        .0;
+    let idx = vector.iter().enumerate().find(|&x| *x.1 == id).ok_or(())?.0;
     let new_input = Input {
         value: new_value,
         id: vector[idx].id.clone(),
@@ -252,7 +243,7 @@ fn create_submit_form_field(
 fn serialize_form_data(input: &Vec<Input>) -> String {
     input
         .iter()
-        .map(|e| format!("{},\n", e.serialize()))
+        .map(|e| format!("{},\n", serde_json::to_string(e).unwrap()))
         .collect()
 }
 
