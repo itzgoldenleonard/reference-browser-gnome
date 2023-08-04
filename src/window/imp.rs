@@ -1,6 +1,7 @@
 use crate::athn_document;
-use crate::athn_document::form::ID;
+//use crate::athn_document::form::ID;
 use crate::athn_document::{Document, ParserState};
+use crate::window::input::Input;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Leaflet;
@@ -32,8 +33,7 @@ pub struct Window {
     pub canvas: TemplateChild<ListBox>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
-    //pub form_data: Vec<(ID, Box<dyn Display>)>,
-    pub form_data: RefCell<Vec<(ID, Box<dyn Debug>)>>,
+    pub form_data: RefCell<Vec<Input>>,
 }
 
 // Boilerplate
@@ -102,6 +102,7 @@ impl Window {
 
         // Sets the actual value in the window object, syntax referenced from https://gtk-rs.org/gtk-rs-core/stable/latest/docs/glib/derive.Properties.html#example
         *self.uri.borrow_mut() = url.to_string();
+        *self.form_data.borrow_mut() = vec![];
 
         let response = get_document(&url);
         let response = match response {

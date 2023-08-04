@@ -3,6 +3,7 @@ mod input;
 
 use crate::athn_document::form;
 use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
+use input::*;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
@@ -146,11 +147,22 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
     widget.set_tooltip_text(Some(&id.id_cloned()));
     widget.set_has_tooltip(false);
     let default = field.global.default.unwrap_or(0);
+
+    let optional = match field.global.optional {
+        false => InputOptional::Required,
+        true => InputOptional::Optional(false),
+    };
+    let new_input_data = Input {
+        id,
+        value: InputTypes::Int(default),
+        optional,
+    };
     window
         .imp()
         .form_data
         .borrow_mut()
-        .append(&mut vec![(id, Box::new(default))]);
+        .push(new_input_data);
+
     widget.set_value(default as f64);
 
     #[allow(unused_must_use)]
@@ -160,7 +172,7 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
         closure_local!(@watch window => move |entry: &SpinButton| {
             let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, Box::new(entry.value_as_int()));
+            override_element_by_id(&mut all_data, id, InputTypes::Int(entry.value_as_int().into()));
         }),
     );
 
@@ -169,17 +181,22 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
 
 /// Returns an error if the id doesnt exist
 fn override_element_by_id(
-    vector: &mut Vec<(form::ID, Box<dyn core::fmt::Debug>)>,
+    vector: &mut Vec<Input>,
     id: form::ID,
-    new_value: Box<dyn core::fmt::Debug>,
+    new_value: InputTypes,
 ) -> Result<(), ()> {
     let idx = vector
         .iter()
         .enumerate()
-        .find(|&x| x.1 .0 == id)
+        .find(|&x| *x.1 == id)
         .ok_or(())?
         .0;
-    vector[idx] = (id, new_value);
+    let new_input = Input {
+        value: new_value,
+        id: vector[idx].id.clone(),
+        optional: vector[idx].optional,
+    };
+    vector[idx] = new_input;
     Ok(())
 }
 
@@ -231,10 +248,11 @@ fn create_submit_form_field(
     widget
 }
 
-fn serialize_form_data(input: &Vec<(form::ID, Box<dyn core::fmt::Debug>)>) -> String {
+// TODO: Remove trailing commas, and wrap the whole thing in curly braces
+fn serialize_form_data(input: &Vec<Input>) -> String {
     input
         .iter()
-        .map(|e| format!("\"{}\": {:?},\n", e.0.clone().id(), e.1))
+        .map(|e| format!("{},\n", e.serialize()))
         .collect()
 }
 

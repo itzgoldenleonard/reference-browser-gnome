@@ -1,19 +1,19 @@
 use crate::athn_document::form::ID;
 
 #[derive(Debug)]
-struct Input {
+pub struct Input {
     pub id: ID,
     pub value: InputTypes,
     pub optional: InputOptional,
 }
 
 #[derive(Debug)]
-enum InputTypes {
+pub enum InputTypes {
     Int(i64),
 }
 
-#[derive(PartialEq, Debug)]
-enum InputOptional {
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum InputOptional {
     Required,
     Optional(bool),
 }
