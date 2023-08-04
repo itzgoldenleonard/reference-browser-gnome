@@ -252,18 +252,16 @@ mod documentbuilder_tests {
 
     #[test]
     fn single_header_line() {
-        use HeaderLine::*;
-
-        let expected = Some(vec![LinkLine(Link {
+        let expected = Some(vec![Link {
             url: "https://localhost:3000/".to_string(),
             label: None,
-        })]);
+        }]);
 
         let document_obj = Document::builder()
-            .add_header_line(LinkLine(Link {
+            .add_header_line(Link {
                 url: "https://localhost:3000/".to_string(),
                 label: None,
-            }))
+            })
             .build();
 
         assert_eq!(document_obj.header, expected);
@@ -271,28 +269,26 @@ mod documentbuilder_tests {
 
     #[test]
     fn multiple_header_lines() {
-        use HeaderLine::*;
-
         let expected = Some(vec![
-            LinkLine(Link {
+            Link {
                 url: "https://localhost:3000/".to_string(),
                 label: None,
-            }),
-            LinkLine(Link {
+            },
+            Link {
                 url: "https://localhost:3000/index.athn".to_string(),
                 label: Some("index".to_string()),
-            }),
+            },
         ]);
 
         let document_obj = Document::builder()
-            .add_header_line(LinkLine(Link {
+            .add_header_line(Link {
                 url: "https://localhost:3000/".to_string(),
                 label: None,
-            }))
-            .add_header_line(LinkLine(Link {
+            })
+            .add_header_line(Link {
                 url: "https://localhost:3000/index.athn".to_string(),
                 label: Some("index".to_string()),
-            }))
+            })
             .build();
 
         assert_eq!(document_obj.header, expected);

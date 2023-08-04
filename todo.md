@@ -8,6 +8,11 @@
     - [X] Make it actually respond to ids
     - [X] Send the data in a write request
     - [ ] Serialize the data properly
+        - [X] Make an Input struct to store in the form_data of Window with all the data needed for serialization
+        - [X] Implement PartialEq with ID for Input
+        - [ ] Make the form fields use Input
+        - [ ] Update the function that finds an element in the form_data vector by ID to use Input
+        - [ ] Implement Serialize for Input
 - [ ] Render all the different form field types (of course they also have to work)
 - [ ] Mostly accurate form field validation
 - [ ] Form field validation from server
