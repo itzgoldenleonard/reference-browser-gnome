@@ -15,6 +15,7 @@ pub struct Input {
 pub enum InputTypes {
     Int(Option<i64>),
     Float(Option<f64>),
+    String(Option<String>),
 }
 
 impl PartialEq<ID> for Input {

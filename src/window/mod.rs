@@ -9,7 +9,7 @@ use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use glib::{closure_local, GString, Object};
 use gtk::{
     gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, SpinButton,
-    TextBuffer, TextView,
+    TextBuffer, TextView, Entry,
 };
 use input::*;
 use url::Url;
@@ -116,9 +116,9 @@ impl Window {
         }
         match field {
             Submit(id, field) => append!(create_submit_form_field(self, id, field, base_url)),
-            Integer(id, field) => append!(create_submit_int_field(self, id, field)),
-            Float(id, field) => append!(create_submit_float_field(self, id, field)),
-            //String(id, field) => append!(create_submit_string_field(self, id, field)),
+            Integer(id, field) => append!(create_int_form_field(self, id, field)),
+            Float(id, field) => append!(create_float_form_field(self, id, field)),
+            String(id, field) => append!(create_string_form_field(self, id, field)),
             _ => (),
         }
     }
@@ -140,7 +140,7 @@ impl Window {
     }
 }
 
-fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField) -> SpinButton {
+fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -> SpinButton {
     let min = field.min.unwrap_or(i64::MIN);
     let max = field.max.unwrap_or(i64::MAX);
     let step = field.step.unwrap_or(1);
@@ -172,7 +172,7 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
     widget
 }
 
-fn create_submit_float_field(window: &Window, id: form::ID, field: form::FloatField) -> SpinButton {
+fn create_float_form_field(window: &Window, id: form::ID, field: form::FloatField) -> SpinButton {
     let min = field.min.unwrap_or(f64::MIN);
     let max = field.max.unwrap_or(f64::MAX);
     let step = field.step.unwrap_or(0.001);
@@ -198,6 +198,43 @@ fn create_submit_float_field(window: &Window, id: form::ID, field: form::FloatFi
             let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
             override_element_by_id(&mut all_data, id, InputTypes::Float(Some(entry.value())));
+        }),
+    );
+
+    widget
+}
+
+fn create_string_form_field(window: &Window, id: form::ID, field: form::StringField) -> Entry {
+    let max = field.max;
+    let secret = field.secret;
+    let multiline = field.multiline;
+    let default = field.global.default.unwrap_or(String::new());
+
+    let widget = Entry::new();
+    widget.set_tooltip_text(Some(&id.id_cloned()));
+    widget.set_has_tooltip(false);
+
+    widget.set_text(&default);
+    if let Some(max) = max {
+        widget.set_max_length(max.get() as i32);
+    }
+    widget.set_visibility(!secret);
+    widget.set_truncate_multiline(!multiline);
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::String(Some(default)),
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "changed",
+        false,
+        closure_local!(@watch window => move |entry: &Entry| {
+            let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            override_element_by_id(&mut all_data, id, InputTypes::String(Some(entry.text().to_string())));
         }),
     );
 
