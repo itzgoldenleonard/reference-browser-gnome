@@ -1,5 +1,15 @@
 # Before first draft release
 - [ ] Render all the different form field types (of course they also have to work)
+    - [X] int
+    - [X] float
+    - [ ] string
+    - [ ] bool
+    - [ ] Labels
+    - [ ] date
+    - [ ] email
+    - [ ] tel
+    - [ ] file
+    - [ ] list
 - [ ] Mostly accurate form field validation
 - [ ] Form field validation from server
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)

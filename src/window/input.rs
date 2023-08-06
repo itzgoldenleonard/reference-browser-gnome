@@ -14,6 +14,7 @@ pub struct Input {
 #[serde(rename_all = "lowercase")]
 pub enum InputTypes {
     Int(Option<i64>),
+    Float(Option<f64>),
 }
 
 impl PartialEq<ID> for Input {

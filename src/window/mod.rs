@@ -117,6 +117,8 @@ impl Window {
         match field {
             Submit(id, field) => append!(create_submit_form_field(self, id, field, base_url)),
             Integer(id, field) => append!(create_submit_int_field(self, id, field)),
+            Float(id, field) => append!(create_submit_float_field(self, id, field)),
+            //String(id, field) => append!(create_submit_string_field(self, id, field)),
             _ => (),
         }
     }
@@ -164,6 +166,38 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
             let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
             override_element_by_id(&mut all_data, id, InputTypes::Int(Some(entry.value_as_int().into())));
+        }),
+    );
+
+    widget
+}
+
+fn create_submit_float_field(window: &Window, id: form::ID, field: form::FloatField) -> SpinButton {
+    let min = field.min.unwrap_or(f64::MIN);
+    let max = field.max.unwrap_or(f64::MAX);
+    let step = field.step.unwrap_or(0.001);
+
+    let widget = SpinButton::with_range(min, max, step);
+    widget.set_tooltip_text(Some(&id.id_cloned()));
+    widget.set_has_tooltip(false);
+    let default = field.global.default.unwrap_or(0.);
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::Float(Some(default)),
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    widget.set_value(default as f64);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "value-changed",
+        false,
+        closure_local!(@watch window => move |entry: &SpinButton| {
+            let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            override_element_by_id(&mut all_data, id, InputTypes::Float(Some(entry.value())));
         }),
     );
 
