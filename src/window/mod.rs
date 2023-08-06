@@ -148,14 +148,9 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
     widget.set_has_tooltip(false);
     let default = field.global.default.unwrap_or(0);
 
-    let optional = match field.global.optional {
-        false => InputOptional::Required,
-        true => InputOptional::Optional { empty: false },
-    };
     let new_input_data = Input {
         id,
-        value: InputTypes::Int(default),
-        optional,
+        value: InputTypes::Int(Some(default)),
     };
     window.imp().form_data.borrow_mut().push(new_input_data);
 
@@ -168,7 +163,7 @@ fn create_submit_int_field(window: &Window, id: form::ID, field: form::IntField)
         closure_local!(@watch window => move |entry: &SpinButton| {
             let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, InputTypes::Int(entry.value_as_int().into()));
+            override_element_by_id(&mut all_data, id, InputTypes::Int(Some(entry.value_as_int().into())));
         }),
     );
 
@@ -182,12 +177,7 @@ fn override_element_by_id(
     new_value: InputTypes,
 ) -> Result<(), ()> {
     let idx = vector.iter().enumerate().find(|&x| *x.1 == id).ok_or(())?.0;
-    let new_input = Input {
-        value: new_value,
-        id: vector[idx].id.clone(),
-        optional: vector[idx].optional,
-    };
-    vector[idx] = new_input;
+    vector[idx].value = new_value;
     Ok(())
 }
 
@@ -205,7 +195,8 @@ fn create_submit_form_field(
         "data-request",
         false,
         closure_local!(@watch window => move |button: SubmitFormField| {
-            button.set_serialized_data(serialize_form_data(&window.imp().form_data.borrow()));
+            //button.set_serialized_data(serialize_form_data(&window.imp().form_data.borrow()));
+            button.set_serialized_data(serde_json::to_string(&window.imp().form_data).unwrap());
         }),
     );
 
@@ -237,14 +228,6 @@ fn create_submit_form_field(
     );
 
     widget
-}
-
-// TODO: Remove trailing commas, and wrap the whole thing in curly braces
-fn serialize_form_data(input: &Vec<Input>) -> String {
-    input
-        .iter()
-        .map(|e| format!("{},\n", serde_json::to_string(e).unwrap()))
-        .collect()
 }
 
 fn list_box_map(list_box: &ListBox, map: fn(widget: &ListBoxRow, parent: &ListBox)) {

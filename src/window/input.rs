@@ -1,6 +1,5 @@
 use crate::athn_document::form::ID;
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct Input {
@@ -8,43 +7,13 @@ pub struct Input {
     pub id: ID,
     #[serde(flatten)]
     pub value: InputTypes,
-    #[serde(flatten)]
-    pub optional: InputOptional,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "value")]
 #[serde(rename_all = "lowercase")]
 pub enum InputTypes {
-    Int(i64),
-}
-
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum InputOptional {
-    Required,
-    Optional { empty: bool },
-}
-
-impl Serialize for InputOptional {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        use InputOptional::*;
-        let mut ss = serializer.serialize_struct("Optional", 2)?;
-        match *self {
-            Required => {
-                ss.serialize_field("optional", &false)?;
-                ss.serialize_field("empty", &())?;
-                ss.end()
-            }
-            Optional { empty } => {
-                ss.serialize_field("optional", &true)?;
-                ss.serialize_field("empty", &empty)?;
-                ss.end()
-            }
-        }
-    }
+    Int(Option<i64>),
 }
 
 impl PartialEq<ID> for Input {
@@ -58,57 +27,31 @@ mod tests {
     use super::*;
     use crate::athn_document::form::ID;
 
+    /*
     #[test]
     fn serialize_serde() {
-        let input = Input {
+        let _vector = vec![
+            Input {
+                id: ID::new("age").unwrap(),
+                value: InputTypes::Int(Some(0)),
+            },
+            Input {
+                id: ID::new("other_int").unwrap(),
+                value: InputTypes::Int(None),
+            },
+        ];
+
+        let _input = Input {
             id: ID::new("age").unwrap(),
-            value: InputTypes::Int(0),
-            //optional: InputOptional::Optional { empty: false },
-            optional: InputOptional::Required,
+            value: InputTypes::Int(Some(0)),
+            //value: InputTypes::Int(None),
         };
 
-        let serialized = serde_json::to_string_pretty(&input).unwrap();
+        let serialized = serde_json::to_string_pretty(&_vector).unwrap();
         println!("{}", serialized);
 
         assert!(serialized.is_empty());
     }
-
-    /*
-        #[test]
-        fn empty_int_field() {
-            let input = Input {
-                id: ID::new("age").unwrap(),
-                value: InputTypes::Int(0),
-                optional: InputOptional::Optional { empty: true },
-            };
-
-            let expected = r#""age": {
-    "type": "int",
-    "optional": true,
-    "empty": true,
-    "value": null
-    }"#;
-
-            assert_eq!(input.serialize(), expected.to_string());
-        }
-
-        #[test]
-        fn int_field() {
-            let input = Input {
-                id: ID::new("age").unwrap(),
-                value: InputTypes::Int(18),
-                optional: InputOptional::Required { empty: () },
-            };
-
-            let expected = r#""age": {
-    "type": "int",
-    "optional": false,
-    "empty": null,
-    "value": 18
-    }"#;
-
-            assert_eq!(input.serialize(), expected.to_string());
-        }
     */
 
     #[test]
@@ -117,8 +60,7 @@ mod tests {
 
         let input = Input {
             id: ID::new("not_test_id").unwrap(),
-            value: InputTypes::Int(0),
-            optional: InputOptional::Optional { empty: true },
+            value: InputTypes::Int(None),
         };
 
         assert_ne!(input, id);
@@ -130,8 +72,7 @@ mod tests {
 
         let input = Input {
             id: ID::new("test_id").unwrap(),
-            value: InputTypes::Int(0),
-            optional: InputOptional::Optional { empty: true },
+            value: InputTypes::Int(None),
         };
 
         assert_eq!(input, id);
