@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="AthnDateFormField" parent="GtkBox">
+        <child>
+            <object class="GtkCalendar" id="calendar">
+            </object>
+        </child>
+        <child>
+            <object class="GtkSpinButton" id="hour">
+                <property name="orientation">vertical</property>
+            </object>
+        </child>
+        <child>
+            <object class="GtkSpinButton" id="minute">
+                <property name="orientation">vertical</property>
+            </object>
+        </child>
+    </template>
+</interface>

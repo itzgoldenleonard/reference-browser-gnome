@@ -8,12 +8,14 @@ use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use glib::{closure_local, GString, Object};
 use gtk::{
-    gio, glib, DropDown, Entry, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
-    SpinButton, StringList, TextBuffer, TextView, Expression, PropertyExpression, StringObject, CheckButton,
+    gio, glib, CheckButton, DropDown, Entry, Expression, Label, ListBox, ListBoxRow,
+    Orientation::Horizontal, PropertyExpression, Separator, SpinButton, StringList, StringObject,
+    TextBuffer, TextView,
 };
 use input::*;
 use url::Url;
 // Custom widgets
+use crate::date::DateFormField;
 use crate::submit::SubmitFormField;
 
 glib::wrapper! {
@@ -123,6 +125,7 @@ impl Window {
             }
             String(id, field) => append!(create_string_form_field(self, id, field)),
             Boolean(id, field) => append!(create_bool_form_field(self, id, field)),
+            Date(id, field) => append!(create_date_form_field(self, id, field)),
             _ => (),
         }
     }
@@ -254,7 +257,8 @@ fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringFiel
         string_list.append(&variant);
     }
 
-    let expression = PropertyExpression::new(StringObject::static_type(), None::<Expression>, "string");
+    let expression =
+        PropertyExpression::new(StringObject::static_type(), None::<Expression>, "string");
     let widget = DropDown::new(Some(string_list), Some(expression));
     widget.set_tooltip_text(Some(&id.id_cloned()));
     widget.set_has_tooltip(false);
@@ -324,6 +328,20 @@ fn create_bool_form_field(window: &Window, id: form::ID, field: form::BoolField)
             override_element_by_id(&mut all_data, id, InputTypes::Bool(Some(button.is_active())));
         }),
     );
+
+    widget
+}
+
+fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField) -> DateFormField {
+    let widget = DateFormField::new(id.clone(), field);
+    widget.set_tooltip_text(Some(&id.id_cloned()));
+    widget.set_has_tooltip(false);
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::Date(None),
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
 
     widget
 }

@@ -17,6 +17,7 @@ pub enum InputTypes {
     Float(Option<f64>),
     String(Option<String>),
     Bool(Option<bool>),
+    Date(Option<std::time::SystemTime>),
 }
 
 impl PartialEq<ID> for Input {

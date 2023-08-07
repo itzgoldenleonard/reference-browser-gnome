@@ -2,5 +2,6 @@
 <gresources>
     <gresource prefix="/org/athn/browser/gnome/">
         <file compressed="true" preprocess="xml-stripblanks">window.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">date_form_field.ui</file>
     </gresource>
 </gresources>
