@@ -8,8 +8,8 @@ use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use glib::{closure_local, GString, Object};
 use gtk::{
-    gio, glib, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator, SpinButton,
-    TextBuffer, TextView, Entry,
+    gio, glib, DropDown, Entry, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
+    SpinButton, StringList, TextBuffer, TextView, Expression, PropertyExpression, StringObject,
 };
 use input::*;
 use url::Url;
@@ -118,6 +118,9 @@ impl Window {
             Submit(id, field) => append!(create_submit_form_field(self, id, field, base_url)),
             Integer(id, field) => append!(create_int_form_field(self, id, field)),
             Float(id, field) => append!(create_float_form_field(self, id, field)),
+            String(id, field) if field.variant.is_some() => {
+                append!(create_enum_form_field(self, id, field))
+            }
             String(id, field) => append!(create_string_form_field(self, id, field)),
             _ => (),
         }
@@ -235,6 +238,51 @@ fn create_string_form_field(window: &Window, id: form::ID, field: form::StringFi
             let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
             override_element_by_id(&mut all_data, id, InputTypes::String(Some(entry.text().to_string())));
+        }),
+    );
+
+    widget
+}
+
+fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringField) -> DropDown {
+    let variants = field.variant.unwrap();
+    let default = variants[0].clone();
+    let many_options = variants.len() >= 2;
+    let string_list = StringList::new(&[]);
+    for variant in variants {
+        string_list.append(&variant);
+    }
+
+    let expression = PropertyExpression::new(StringObject::static_type(), None::<Expression>, "string");
+    let widget = DropDown::new(Some(string_list), Some(expression));
+    widget.set_tooltip_text(Some(&id.id_cloned()));
+    widget.set_has_tooltip(false);
+    if many_options {
+        widget.set_enable_search(true);
+    }
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::String(Some(default)),
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "notify::selected-item",
+        false,
+        closure_local!(@watch window => move |entry: &DropDown, _pspec: &glib::ParamSpec| {
+            let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            match entry.selected_item() {
+                None => {
+                    override_element_by_id(&mut all_data, id, InputTypes::String(None));
+                }
+                Some(item) => {
+                    let string = item.downcast_ref::<StringObject>().map(|s| s.string().to_string());
+                    override_element_by_id(&mut all_data, id, InputTypes::String(string));
+                }
+            }
         }),
     );
 

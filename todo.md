@@ -2,7 +2,7 @@
 - [ ] Render all the different form field types (of course they also have to work)
     - [X] int
     - [X] float
-    - [ ] string
+    - [X] string
     - [ ] bool
     - [ ] Labels
     - [ ] date
@@ -16,5 +16,9 @@
 - [ ] Add an option to use a custom language preference list
 - [ ] Submit to flathub
 
-# Bugs
+# Bugs/minor issues
 - [ ] Files with spaces in their names dont open (no such file or directory found) (I think it's because I am using the wrong method to get the file path from the file:// uri in the get_document_by_file function)
+## Forms
+- [ ] The min property doesnt work on string fields
+- [ ] Secret string fields dont use the PasswordEntry widget
+- [ ] Multiline string fields only work if you paste multi line text into them
