@@ -9,7 +9,7 @@ use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use glib::{closure_local, GString, Object};
 use gtk::{
     gio, glib, DropDown, Entry, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
-    SpinButton, StringList, TextBuffer, TextView, Expression, PropertyExpression, StringObject,
+    SpinButton, StringList, TextBuffer, TextView, Expression, PropertyExpression, StringObject, CheckButton,
 };
 use input::*;
 use url::Url;
@@ -122,6 +122,7 @@ impl Window {
                 append!(create_enum_form_field(self, id, field))
             }
             String(id, field) => append!(create_string_form_field(self, id, field)),
+            Boolean(id, field) => append!(create_bool_form_field(self, id, field)),
             _ => (),
         }
     }
@@ -283,6 +284,44 @@ fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringFiel
                     override_element_by_id(&mut all_data, id, InputTypes::String(string));
                 }
             }
+        }),
+    );
+
+    widget
+}
+
+fn create_bool_form_field(window: &Window, id: form::ID, field: form::BoolField) -> CheckButton {
+    let label = field.global.label.unwrap_or(id.id_cloned());
+    let optional = field.global.optional;
+    let default = match (field.global.default, optional) {
+        (None, true) => None,
+        (None, false) => Some(false),
+        (Some(v), _) => Some(v),
+    };
+
+    let widget = CheckButton::with_label(&label);
+    widget.set_tooltip_text(Some(&id.id_cloned()));
+    widget.set_has_tooltip(false);
+    match default {
+        Some(default) => widget.set_active(default),
+        None => widget.set_inconsistent(true),
+    }
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::Bool(default),
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "toggled",
+        false,
+        closure_local!(@watch window => move |button: &CheckButton| {
+            let id = form::ID::new(button.tooltip_text().unwrap().as_str()).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            button.set_inconsistent(false);
+            override_element_by_id(&mut all_data, id, InputTypes::Bool(Some(button.is_active())));
         }),
     );
 

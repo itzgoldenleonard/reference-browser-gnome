@@ -16,6 +16,7 @@ pub enum InputTypes {
     Int(Option<i64>),
     Float(Option<f64>),
     String(Option<String>),
+    Bool(Option<bool>),
 }
 
 impl PartialEq<ID> for Input {

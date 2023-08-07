@@ -3,13 +3,13 @@
     - [X] int
     - [X] float
     - [X] string
-    - [ ] bool
-    - [ ] Labels
+    - [X] bool
     - [ ] date
     - [ ] email
     - [ ] tel
     - [ ] file
     - [ ] list
+    - [ ] Labels
 - [ ] Mostly accurate form field validation
 - [ ] Form field validation from server
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
@@ -22,3 +22,4 @@
 - [ ] The min property doesnt work on string fields
 - [ ] Secret string fields dont use the PasswordEntry widget
 - [ ] Multiline string fields only work if you paste multi line text into them
+- [ ] Optional boolean fields dont have a way to reset to undecided
