@@ -14,6 +14,7 @@ use gtk::{
 };
 use input::*;
 use url::Url;
+use std::time::{SystemTime, Duration};
 // Custom widgets
 use crate::date::DateFormField;
 use crate::submit::SubmitFormField;
@@ -342,6 +343,19 @@ fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField)
         value: InputTypes::Date(None),
     };
     window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "updated",
+        false,
+        closure_local!(@watch window => move |form_field: &DateFormField, id: String, time: glib::DateTime| {
+            let id = form::ID::new(&id).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            let time_formatted = SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(time.to_unix() as u64));
+            println!("{}", time.format_iso8601().unwrap_or_default());
+            override_element_by_id(&mut all_data, id, InputTypes::Date(time_formatted));
+        }),
+    );
 
     widget
 }

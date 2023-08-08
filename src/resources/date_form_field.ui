@@ -3,16 +3,36 @@
     <template class="AthnDateFormField" parent="GtkBox">
         <child>
             <object class="GtkCalendar" id="calendar">
+                <signal name="day-selected" handler="on_day_selected" swapped="true"/>
             </object>
         </child>
         <child>
             <object class="GtkSpinButton" id="hour">
+                <signal name="value_changed" handler="on_time_change" swapped="true"/>
                 <property name="orientation">vertical</property>
+                <property name="snap-to-ticks">true</property>
+                <property name="adjustment">
+                    <object class="GtkAdjustment">
+                        <property name="upper">23</property>
+                        <property name="lower">0</property>
+                        <property name="step-increment">1</property>
+                    </object>
+                </property>
             </object>
         </child>
         <child>
             <object class="GtkSpinButton" id="minute">
+                <signal name="value_changed" handler="on_time_change" swapped="true"/>
+                <signal name="wrapped" handler="on_minute_wrapped" swapped="true"/>
                 <property name="orientation">vertical</property>
+                <property name="wrap">true</property>
+                <property name="adjustment">
+                    <object class="GtkAdjustment">
+                        <property name="upper">59</property>
+                        <property name="lower">0</property>
+                        <property name="step-increment">1</property>
+                    </object>
+                </property>
             </object>
         </child>
     </template>

@@ -5,11 +5,11 @@
     - [X] string
     - [X] bool
     - [ ] date
-        - [ ] Get the time pickers to have the right min and maxes
-        - [ ] Emit a signal on change with the right data
-        - [ ] Connect to the signal to put that data into the Window
-        - [ ] Implement form field properties
-        - [ ] When either time or date changes send the signal with the correct value
+        - [X] Get the time pickers to have the right min and maxes
+        - [X] Emit a signal on change with the right data
+        - [X] Connect to the signal to put that data into the Window
+        - [X] Implement form field properties
+        - [X] When either time or date changes send the signal with the correct value (turn off wrapping when the minute picker gets very close to midnight)
         - [ ] Get it to serialize properly
         - [ ] Clean up a bit
     - [ ] email
@@ -23,6 +23,7 @@
 
 # Bugs
 - [ ] Files with spaces in their names dont open (no such file or directory found) (I think it's because I am using the wrong method to get the file path from the file:// uri in the get_document_by_file function)
+- [ ] A line beginning with xx??? still gets registered as a form field
 
 # After first draft release
 ## Forms
@@ -30,8 +31,10 @@
 - [ ] Secret string fields dont use the PasswordEntry widget
 - [ ] Multiline string fields only work if you paste multi line text into them
 - [ ] Optional boolean fields dont have a way to reset to undecided
+- [ ] Default, min and max properties dont work for date form fields
 - [ ] Implement tel fields
 - [ ] Implement list fields
 - [ ] Do form fields properly
     Make a FormFieldExt trait, and make every type of form field a subclassed class of the FormField parent class (I dont speak OOP). Give them all a unified API, make it so that you can down/upcast them between FormField and the subclass, give them some common signals that can be used to store their value in the Window, give them a common constructor so that they're easy to make with just an ID and a field enum, give them some common properties for things like server form field validation.
 - [ ] Proper server side form validation
+
