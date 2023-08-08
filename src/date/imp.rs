@@ -82,6 +82,14 @@ impl DateFormField {
         )?;
         date.to_utc()
     }
+
+    pub fn set_datetime(&self, datetime: DateTime) {
+        if let Ok(datetime) = datetime.to_local() {
+            self.calendar.select_day(&datetime);
+            self.hour.set_value(datetime.hour().into());
+            self.minute.set_value(datetime.minute().into());
+        }
+    }
 }
 
 

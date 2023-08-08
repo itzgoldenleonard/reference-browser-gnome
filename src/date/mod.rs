@@ -5,6 +5,7 @@ use glib::Object;
 use gtk::glib;
 use adw::subclass::prelude::*;
 use adw::prelude::*;
+use std::time::SystemTime;
 
 glib::wrapper! {
     pub struct DateFormField(ObjectSubclass<imp::DateFormField>)
@@ -29,6 +30,18 @@ impl DateFormField {
             widget.imp().minute.set_visible(false);
         }
 
+        if let Some(default) = field.global.default {
+            if let Ok(default) = convert_default(default) {
+                widget.imp().set_datetime(default);
+            }
+        }
+
         widget
     }
+
+}
+
+fn convert_default(default: SystemTime) -> Result<glib::DateTime, glib::BoolError> {
+    let default = default.duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap_or_default();
+    glib::DateTime::from_unix_utc(default.as_secs() as i64)
 }

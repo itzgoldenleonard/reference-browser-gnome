@@ -17,6 +17,7 @@ pub enum InputTypes {
     Float(Option<f64>),
     String(Option<String>),
     Bool(Option<bool>),
+    #[serde(with = "humantime_serde")]
     Date(Option<std::time::SystemTime>),
 }
 

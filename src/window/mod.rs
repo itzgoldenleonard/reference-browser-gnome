@@ -334,13 +334,15 @@ fn create_bool_form_field(window: &Window, id: form::ID, field: form::BoolField)
 }
 
 fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField) -> DateFormField {
+    let default = field.global.default;
+
     let widget = DateFormField::new(id.clone(), field);
     widget.set_tooltip_text(Some(&id.id_cloned()));
     widget.set_has_tooltip(false);
 
     let new_input_data = Input {
         id,
-        value: InputTypes::Date(None),
+        value: InputTypes::Date(default),
     };
     window.imp().form_data.borrow_mut().push(new_input_data);
 

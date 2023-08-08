@@ -22,6 +22,7 @@ tuple = "0.5.1"
 once_cell = "1.0"
 serde = "1.0.181"
 serde_json = "1.0.104"
+humantime-serde = "1.1.1"
 
 [build-dependencies]
 glib-build-tools = "0.17.0"

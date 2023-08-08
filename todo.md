@@ -4,14 +4,7 @@
     - [X] float
     - [X] string
     - [X] bool
-    - [ ] date
-        - [X] Get the time pickers to have the right min and maxes
-        - [X] Emit a signal on change with the right data
-        - [X] Connect to the signal to put that data into the Window
-        - [X] Implement form field properties
-        - [X] When either time or date changes send the signal with the correct value (turn off wrapping when the minute picker gets very close to midnight)
-        - [ ] Get it to serialize properly
-        - [ ] Clean up a bit
+    - [X] date
     - [ ] email
     - [ ] file
     - [ ] Labels
@@ -31,7 +24,8 @@
 - [ ] Secret string fields dont use the PasswordEntry widget
 - [ ] Multiline string fields only work if you paste multi line text into them
 - [ ] Optional boolean fields dont have a way to reset to undecided
-- [ ] Default, min and max properties dont work for date form fields
+- [ ] min and max properties dont work for date form fields
+- [ ] Timeonly form fields behave weirdly with timezones
 - [ ] Implement tel fields
 - [ ] Implement list fields
 - [ ] Do form fields properly
