@@ -8,7 +8,7 @@
     - [ ] email
         - [X] Defaults
         - [X] Error check
-        - [ ] Error styling
+        - [X] Error styling
         - [ ] Stop form from being sent when invalid
     - [ ] file
     - [ ] Labels

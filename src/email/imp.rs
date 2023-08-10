@@ -21,7 +21,7 @@ pub struct EmailFormField {
     id: RefCell<String>,
     #[property(get, set)]
     label: RefCell<String>,
-    #[property(get, set)]
+    #[property(get, set = Self::valid_setter)]
     valid: Cell<bool>,
     #[property(get, set)]
     optional: Cell<bool>,
@@ -49,11 +49,26 @@ impl EmailFormField {
     fn on_entry_changed(&self, entry: &Entry) {
         let text = &entry.text();
         let obj = self.obj();
-        obj.set_valid(EmailAddress::is_valid(text));
-        if text.is_empty() && obj.optional() {
-            obj.set_valid(true);
+
+        let valid = if text.is_empty() && obj.optional() {
+            true
+        } else {
+            EmailAddress::is_valid(text)
+        };
+        if obj.valid() != valid {
+            obj.set_valid(valid)
+        };
+
+        obj.emit_by_name::<()>("updated", &[&obj.id(), &text]);
+    }
+
+    fn valid_setter(&self, valid: bool) {
+        if valid {
+            self.obj().remove_css_class("error");
+        } else {
+            self.obj().add_css_class("error");
         }
-        obj.emit_by_name::<()>("updated", &[&self.obj().id(), &text]);
+        self.valid.set(valid);
     }
 }
 
@@ -91,5 +106,5 @@ impl ObjectImpl for EmailFormField {
         SIGNALS.as_ref()
     }
 }
-impl WidgetImpl for EmailFormField { }
+impl WidgetImpl for EmailFormField {}
 impl BoxImpl for EmailFormField {}
