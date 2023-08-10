@@ -2,6 +2,8 @@ mod imp;
 mod input;
 
 use crate::athn_document::form;
+use email_address::EmailAddress;
+use std::str::FromStr;
 use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -17,6 +19,7 @@ use url::Url;
 use std::time::{SystemTime, Duration};
 // Custom widgets
 use crate::date::DateFormField;
+use crate::email::EmailFormField;
 use crate::submit::SubmitFormField;
 
 glib::wrapper! {
@@ -127,6 +130,7 @@ impl Window {
             String(id, field) => append!(create_string_form_field(self, id, field)),
             Boolean(id, field) => append!(create_bool_form_field(self, id, field)),
             Date(id, field) => append!(create_date_form_field(self, id, field)),
+            Email(id, field) => append!(create_email_form_field(self, id, field)),
             _ => (),
         }
     }
@@ -337,8 +341,6 @@ fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField)
     let default = field.global.default;
 
     let widget = DateFormField::new(id.clone(), field);
-    widget.set_tooltip_text(Some(&id.id_cloned()));
-    widget.set_has_tooltip(false);
 
     let new_input_data = Input {
         id,
@@ -350,12 +352,36 @@ fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField)
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |form_field: &DateFormField, id: String, time: glib::DateTime| {
+        closure_local!(@watch window => move |_form_field: &DateFormField, id: String, time: glib::DateTime| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
             let time_formatted = SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(time.to_unix() as u64));
-            println!("{}", time.format_iso8601().unwrap_or_default());
             override_element_by_id(&mut all_data, id, InputTypes::Date(time_formatted));
+        }),
+    );
+
+    widget
+}
+
+fn create_email_form_field(window: &Window, id: form::ID, field: form::EmailField) -> EmailFormField {
+    let default = field.global.default.clone();
+    let widget = EmailFormField::new(id.clone(), field);
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::Email(default),
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "updated",
+        false,
+        closure_local!(@watch window => move |_form_field: &EmailFormField, id: String, email: String| {
+            let id = form::ID::new(&id).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            let email_formatted = EmailAddress::from_str(&email).ok();
+            override_element_by_id(&mut all_data, id, InputTypes::Email(email_formatted));
         }),
     );
 

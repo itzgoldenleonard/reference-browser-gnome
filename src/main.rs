@@ -3,6 +3,7 @@ mod window;
 mod submit;
 //mod integer;
 mod date;
+mod email;
 
 use adw::prelude::*;
 use adw::Application;

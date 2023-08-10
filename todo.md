@@ -6,6 +6,10 @@
     - [X] bool
     - [X] date
     - [ ] email
+        - [X] Defaults
+        - [X] Error check
+        - [ ] Error styling
+        - [ ] Stop form from being sent when invalid
     - [ ] file
     - [ ] Labels
 - [ ] Mostly accurate form field validation
