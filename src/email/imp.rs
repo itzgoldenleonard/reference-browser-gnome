@@ -59,7 +59,7 @@ impl EmailFormField {
             obj.set_valid(valid)
         };
 
-        obj.emit_by_name::<()>("updated", &[&obj.id(), &text]);
+        obj.emit_by_name::<()>("updated", &[&obj.id(), &text, &valid]);
     }
 
     fn valid_setter(&self, valid: bool) {
@@ -99,7 +99,7 @@ impl ObjectImpl for EmailFormField {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![
                 Signal::builder("updated")
-                    .param_types([String::static_type(), String::static_type()])
+                    .param_types([String::static_type(), String::static_type(), bool::static_type()])
                     .build(),
             ]
         });

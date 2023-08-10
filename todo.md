@@ -5,14 +5,11 @@
     - [X] string
     - [X] bool
     - [X] date
-    - [ ] email
-        - [X] Defaults
-        - [X] Error check
-        - [X] Error styling
-        - [ ] Stop form from being sent when invalid
+    - [X] email
     - [ ] file
     - [ ] Labels
 - [ ] Mostly accurate form field validation
+- [ ] Multiple forms on 1 page
 - [ ] Form field validation from server (message)
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Add an option to use a custom language preference list

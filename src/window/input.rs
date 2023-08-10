@@ -7,6 +7,8 @@ pub struct Input {
     pub id: ID,
     #[serde(flatten)]
     pub value: InputTypes,
+    #[serde(skip)]
+    pub valid: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -67,6 +69,7 @@ mod tests {
         let input = Input {
             id: ID::new("not_test_id").unwrap(),
             value: InputTypes::Int(None),
+            valid: true,
         };
 
         assert_ne!(input, id);
@@ -79,6 +82,7 @@ mod tests {
         let input = Input {
             id: ID::new("test_id").unwrap(),
             value: InputTypes::Int(None),
+            valid: true,
         };
 
         assert_eq!(input, id);

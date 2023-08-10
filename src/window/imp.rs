@@ -155,15 +155,10 @@ impl Window {
         self.request_error.set_label(err_message);
     }
 
-    /*
     pub fn is_form_valid(&self) -> bool {
         let data = self.form_data.borrow();
-        for e in &*data {
-            println!("{:?}", e);
-        }
-        true
+        data.iter().find(|e| e.valid == false).is_none()
     }
-    */
 
     #[template_callback]
     fn on_search_entry_activate(&self, search_entry: &gtk::SearchEntry) {
