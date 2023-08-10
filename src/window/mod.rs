@@ -2,12 +2,11 @@ mod imp;
 mod input;
 
 use crate::athn_document::form;
-use email_address::EmailAddress;
-use std::str::FromStr;
 use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
+use email_address::EmailAddress;
 use glib::{closure_local, GString, Object};
 use gtk::{
     gio, glib, CheckButton, DropDown, Entry, Expression, Label, ListBox, ListBoxRow,
@@ -15,8 +14,9 @@ use gtk::{
     TextBuffer, TextView,
 };
 use input::*;
+use std::str::FromStr;
+use std::time::{Duration, SystemTime};
 use url::Url;
-use std::time::{SystemTime, Duration};
 // Custom widgets
 use crate::date::DateFormField;
 use crate::email::EmailFormField;
@@ -369,9 +369,17 @@ fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField)
     widget
 }
 
-fn create_email_form_field(window: &Window, id: form::ID, field: form::EmailField) -> EmailFormField {
+fn create_email_form_field(
+    window: &Window,
+    id: form::ID,
+    field: form::EmailField,
+) -> EmailFormField {
     let default = field.global.default.clone();
-    let valid = if default.is_none() && field.global.optional == false { false } else { true };
+    let valid = if default.is_none() && field.global.optional == false {
+        false
+    } else {
+        true
+    };
     let widget = EmailFormField::new(id.clone(), field);
 
     let new_input_data = Input {

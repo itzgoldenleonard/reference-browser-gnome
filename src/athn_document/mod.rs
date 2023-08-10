@@ -162,11 +162,7 @@ pub fn parse(
                 },
                 Section::Header => match current_line.split_once("@@@") {
                     None => Err("Invalid header line encountered"),
-                    Some((_, val)) => parse(
-                        line,
-                        builder.add_header_line(val.into()),
-                        state,
-                    ),
+                    Some((_, val)) => parse(line, builder.add_header_line(val.into()), state),
                 },
                 Section::Footer => match current_line.split_once("@@@") {
                     Some((_, val)) => parse(

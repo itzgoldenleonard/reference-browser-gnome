@@ -1,10 +1,10 @@
 mod imp;
 
 use crate::athn_document::form;
+use adw::prelude::*;
+use adw::subclass::prelude::*;
 use glib::Object;
 use gtk::glib;
-use adw::subclass::prelude::*;
-use adw::prelude::*;
 
 glib::wrapper! {
     pub struct EmailFormField(ObjectSubclass<imp::EmailFormField>)

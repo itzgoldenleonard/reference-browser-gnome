@@ -83,9 +83,10 @@ impl ButtonImpl for SubmitFormField {
     fn clicked(&self) {
         self.obj().emit_by_name::<()>("data-request", &[]);
         if self.obj().invalid_form() {
-            return self
-                .obj()
-                .emit_by_name::<()>("submit-error", &[&"A form field in this form is invalid".to_string()]);
+            return self.obj().emit_by_name::<()>(
+                "submit-error",
+                &[&"A form field in this form is invalid".to_string()],
+            );
         }
 
         let response = match post(self.obj().destination(), self.obj().serialized_data()) {

@@ -1,12 +1,12 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use email_address::EmailAddress;
 use glib::subclass::InitializingObject;
 use glib::subclass::Signal;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, Entry, CompositeTemplate, Label};
+use gtk::{glib, CompositeTemplate, Entry, Label};
 use once_cell::sync::Lazy;
-use std::cell::{RefCell, Cell};
-use email_address::EmailAddress;
+use std::cell::{Cell, RefCell};
 
 #[derive(Default, CompositeTemplate, Properties)]
 #[template(resource = "/org/athn/browser/gnome/email_form_field.ui")]
@@ -72,7 +72,6 @@ impl EmailFormField {
     }
 }
 
-
 impl ObjectImpl for EmailFormField {
     fn properties() -> &'static [ParamSpec] {
         Self::derived_properties()
@@ -97,11 +96,13 @@ impl ObjectImpl for EmailFormField {
 
     fn signals() -> &'static [Signal] {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
-            vec![
-                Signal::builder("updated")
-                    .param_types([String::static_type(), String::static_type(), bool::static_type()])
-                    .build(),
-            ]
+            vec![Signal::builder("updated")
+                .param_types([
+                    String::static_type(),
+                    String::static_type(),
+                    bool::static_type(),
+                ])
+                .build()]
         });
         SIGNALS.as_ref()
     }

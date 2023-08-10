@@ -1,10 +1,10 @@
 mod imp;
 
 use crate::athn_document::form;
+use adw::prelude::*;
+use adw::subclass::prelude::*;
 use glib::Object;
 use gtk::glib;
-use adw::subclass::prelude::*;
-use adw::prelude::*;
 use std::time::SystemTime;
 
 glib::wrapper! {
@@ -15,9 +15,7 @@ glib::wrapper! {
 
 impl DateFormField {
     pub fn new(id: form::ID, field: form::DateField) -> Self {
-        let widget: Self = Object::builder()
-            .property("id", id.id())
-            .build();
+        let widget: Self = Object::builder().property("id", id.id()).build();
 
         if field.time {
             widget.imp().calendar.set_visible(false);
@@ -38,10 +36,11 @@ impl DateFormField {
 
         widget
     }
-
 }
 
 fn convert_default(default: SystemTime) -> Result<glib::DateTime, glib::BoolError> {
-    let default = default.duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap_or_default();
+    let default = default
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .unwrap_or_default();
     glib::DateTime::from_unix_utc(default.as_secs() as i64)
 }
