@@ -2,11 +2,11 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
 use glib::subclass::Signal;
-use glib::DateTime;
-use glib::{ParamSpec, Properties, Value};
+use glib::{clone, ParamSpec, Properties, Value};
+use gtk::gio::File;
 use gtk::{glib, CompositeTemplate, FileDialog};
 use once_cell::sync::Lazy;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 #[derive(Default, CompositeTemplate, Properties)]
 #[template(resource = "/org/athn/browser/gnome/file_form_field.ui")]
@@ -14,9 +14,11 @@ use std::cell::RefCell;
 pub struct FileFormField {
     #[template_child]
     pub picker: TemplateChild<FileDialog>,
-    
+
     #[property(get, set)]
     id: RefCell<String>,
+    #[property(get, set)]
+    optional: Cell<bool>,
 }
 
 #[glib::object_subclass]
@@ -36,8 +38,7 @@ impl ObjectSubclass for FileFormField {
 }
 
 #[gtk::template_callbacks]
-impl FileFormField {
-}
+impl FileFormField {}
 
 impl ObjectImpl for FileFormField {
     fn properties() -> &'static [ParamSpec] {
@@ -59,7 +60,11 @@ impl ObjectImpl for FileFormField {
     fn signals() -> &'static [Signal] {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![Signal::builder("updated")
-                .param_types([String::static_type(), DateTime::static_type()])
+                .param_types([
+                    String::static_type(),
+                    File::static_type(),
+                    bool::static_type(),
+                ])
                 .build()]
         });
         SIGNALS.as_ref()
@@ -68,7 +73,11 @@ impl ObjectImpl for FileFormField {
 impl WidgetImpl for FileFormField {}
 impl ButtonImpl for FileFormField {
     fn clicked(&self) {
-        let file_chooser = &self.picker;
-        file_chooser.open(None::<&gtk::Window>, None::<&gtk::gio::Cancellable>, |_| {println!("Opened the dialog")});
+        let ctx = glib::MainContext::default();
+        ctx.spawn_local(clone!(@weak self as button => async move {
+            if let Ok(file) = button.picker.open_future(None::<&gtk::Window>).await {
+                button.obj().emit_by_name::<()>("updated", &[&button.obj().id(), &file, &true]);
+            }
+        }));
     }
 }

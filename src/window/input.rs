@@ -22,6 +22,7 @@ pub enum InputTypes {
     #[serde(with = "humantime_serde")]
     Date(Option<std::time::SystemTime>),
     Email(Option<email_address::EmailAddress>),
+    File(Option<String>),
 }
 
 impl PartialEq<ID> for Input {

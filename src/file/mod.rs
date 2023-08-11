@@ -19,6 +19,7 @@ impl FileFormField {
         let widget: Self = Object::builder()
             .property("id", id.id())
             .property("label", label.clone())
+            .property("optional", field.global.optional)
             .build();
 
         if let Some(mime_types) = field.allowed_types {

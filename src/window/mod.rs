@@ -407,15 +407,13 @@ fn create_email_form_field(
 }
 
 fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField) -> FileFormField {
-    let _default = field.global.default;
-
+    let optional = field.global.optional;
     let widget = FileFormField::new(id.clone(), field);
 
-    /*
     let new_input_data = Input {
         id,
-        value: InputTypes::Date(default),
-        valid: true,
+        value: InputTypes::File(None),
+        valid: optional,
     };
     window.imp().form_data.borrow_mut().push(new_input_data);
 
@@ -423,14 +421,14 @@ fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField)
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &DateFormField, id: String, time: glib::DateTime| {
+        closure_local!(@watch window => move |_form_field: &FileFormField, id: String, file: gtk::gio::File, valid: bool| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            let time_formatted = SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(time.to_unix() as u64));
-            override_element_by_id(&mut all_data, id, InputTypes::Date(time_formatted), true);
+            let file_formatted = file.basename();
+            let file_formatted = file_formatted.map(|e| e.to_str().unwrap_or_default().to_string());
+            override_element_by_id(&mut all_data, id, InputTypes::File(file_formatted), valid);
         }),
     );
-    */
 
     widget
 }
