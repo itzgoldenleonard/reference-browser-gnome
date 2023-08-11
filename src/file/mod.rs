@@ -1,17 +1,15 @@
 mod imp;
 
 use crate::athn_document::form;
-/*
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-*/
 use glib::Object;
-use gtk::glib;
+use gtk::{glib, FileFilter};
 
 glib::wrapper! {
     pub struct FileFormField(ObjectSubclass<imp::FileFormField>)
-        @extends gtk::Box, gtk::Widget,
-        @implements gtk::Accessible, gtk::Orientable, gtk::Buildable, gtk::ConstraintTarget;
+        @extends gtk::Button, gtk::Widget,
+        @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 impl FileFormField {
@@ -20,8 +18,20 @@ impl FileFormField {
 
         let widget: Self = Object::builder()
             .property("id", id.id())
-            .property("label", label)
+            .property("label", label.clone())
             .build();
+
+        if let Some(mime_types) = field.allowed_types {
+            let filter = FileFilter::new();
+            for type_ in mime_types {
+                filter.add_mime_type(&type_);
+            }
+            let model = gtk::gio::ListStore::new(FileFilter::static_type());
+            model.append(&filter);
+            widget.imp().picker.set_filters(&model);
+        } 
+
+        widget.imp().picker.set_title(&label);
 
         widget
     }

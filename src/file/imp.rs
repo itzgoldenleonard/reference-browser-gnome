@@ -4,7 +4,7 @@ use glib::subclass::InitializingObject;
 use glib::subclass::Signal;
 use glib::DateTime;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, CompositeTemplate, Button, Label};
+use gtk::{glib, CompositeTemplate, FileDialog};
 use once_cell::sync::Lazy;
 use std::cell::RefCell;
 
@@ -13,12 +13,8 @@ use std::cell::RefCell;
 #[properties(wrapper_type = super::FileFormField)]
 pub struct FileFormField {
     #[template_child]
-    pub button: TemplateChild<Button>,
-    #[template_child]
-    pub label_widget: TemplateChild<Label>,
-
-    #[property(get, set)]
-    label: RefCell<String>,
+    pub picker: TemplateChild<FileDialog>,
+    
     #[property(get, set)]
     id: RefCell<String>,
 }
@@ -27,7 +23,7 @@ pub struct FileFormField {
 impl ObjectSubclass for FileFormField {
     const NAME: &'static str = "AthnFileFormField";
     type Type = super::FileFormField;
-    type ParentType = gtk::Box;
+    type ParentType = gtk::Button;
 
     fn class_init(klass: &mut Self::Class) {
         klass.bind_template();
@@ -41,11 +37,6 @@ impl ObjectSubclass for FileFormField {
 
 #[gtk::template_callbacks]
 impl FileFormField {
-    #[template_callback]
-    fn on_button_click(&self, button: &Button) {
-        let file_chooser = gtk::FileDialog::new();
-        file_chooser.open(None::<&gtk::Window>, None::<&gtk::gio::Cancellable>, |_| {println!("Opened the dialog")});
-    }
 }
 
 impl ObjectImpl for FileFormField {
@@ -63,11 +54,6 @@ impl ObjectImpl for FileFormField {
 
     fn constructed(&self) {
         self.parent_constructed();
-
-        let obj = self.obj();
-        obj.bind_property::<Label>("label", self.label_widget.as_ref(), "label")
-            .sync_create()
-            .build();
     }
 
     fn signals() -> &'static [Signal] {
@@ -80,4 +66,9 @@ impl ObjectImpl for FileFormField {
     }
 }
 impl WidgetImpl for FileFormField {}
-impl BoxImpl for FileFormField {}
+impl ButtonImpl for FileFormField {
+    fn clicked(&self) {
+        let file_chooser = &self.picker;
+        file_chooser.open(None::<&gtk::Window>, None::<&gtk::gio::Cancellable>, |_| {println!("Opened the dialog")});
+    }
+}
