@@ -4,6 +4,7 @@ mod window;
 //mod integer;
 mod date;
 mod email;
+mod file;
 
 use adw::prelude::*;
 use adw::Application;

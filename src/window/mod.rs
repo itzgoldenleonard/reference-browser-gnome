@@ -20,6 +20,7 @@ use url::Url;
 // Custom widgets
 use crate::date::DateFormField;
 use crate::email::EmailFormField;
+use crate::file::FileFormField;
 use crate::submit::SubmitFormField;
 
 glib::wrapper! {
@@ -131,6 +132,7 @@ impl Window {
             Boolean(id, field) => append!(create_bool_form_field(self, id, field)),
             Date(id, field) => append!(create_date_form_field(self, id, field)),
             Email(id, field) => append!(create_email_form_field(self, id, field)),
+            File(id, field) => append!(create_file_form_field(self, id, field)),
             _ => (),
         }
     }
@@ -400,6 +402,35 @@ fn create_email_form_field(
             override_element_by_id(&mut all_data, id, InputTypes::Email(email_formatted), valid);
         }),
     );
+
+    widget
+}
+
+fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField) -> FileFormField {
+    let _default = field.global.default;
+
+    let widget = FileFormField::new(id.clone(), field);
+
+    /*
+    let new_input_data = Input {
+        id,
+        value: InputTypes::Date(default),
+        valid: true,
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "updated",
+        false,
+        closure_local!(@watch window => move |_form_field: &DateFormField, id: String, time: glib::DateTime| {
+            let id = form::ID::new(&id).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            let time_formatted = SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(time.to_unix() as u64));
+            override_element_by_id(&mut all_data, id, InputTypes::Date(time_formatted), true);
+        }),
+    );
+    */
 
     widget
 }

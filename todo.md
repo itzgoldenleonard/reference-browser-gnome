@@ -7,6 +7,11 @@
     - [X] date
     - [X] email
     - [ ] file
+        - [ ] Basic
+        - [ ] Max
+        - [ ] MIME type
+        - [ ] Serialize it
+        - [ ] Error
     - [ ] Labels
 - [ ] Mostly accurate form field validation
 - [ ] Multiple forms on 1 page
