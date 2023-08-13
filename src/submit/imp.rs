@@ -1,7 +1,7 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::Signal;
-use glib::{ParamSpec, Properties, Value};
+use glib::{clone, ParamSpec, Properties, Value};
 use gtk::glib;
 use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
@@ -89,6 +89,7 @@ impl ButtonImpl for SubmitFormField {
             );
         }
 
+        /*
         let response = match post(self.obj().destination(), self.obj().serialized_data()) {
             Ok(val) => val,
             Err(e) => {
@@ -100,14 +101,31 @@ impl ButtonImpl for SubmitFormField {
 
         self.obj()
             .emit_by_name::<()>("submit-success", &[&response]);
+        */
+
+        let ctx = glib::MainContext::default();
+        ctx.spawn_local(clone!(@weak self as button => async move {
+            let response = match post(button.obj().destination(), button.obj().serialized_data()) {
+                Ok(val) => val,
+                Err(e) => {
+                    return button
+                        .obj()
+                        .emit_by_name::<()>("submit-error", &[&e.to_string()]);
+                }
+            };
+
+            button.obj()
+                .emit_by_name::<()>("submit-success", &[&response]);
+        }));
     }
 }
 
-fn post(destination: String, body: String) -> reqwest::Result<String> {
-    let https_client = reqwest::blocking::Client::builder()
+#[tokio::main]
+async fn post(destination: String, body: String) -> reqwest::Result<String> {
+    let https_client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true)
         .build()?;
-    let response = https_client.post(destination).body(body).send()?;
+    let response = https_client.post(destination).body(body).send().await?;
     let response = response.error_for_status()?;
-    response.text()
+    response.text().await
 }

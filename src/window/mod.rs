@@ -7,16 +7,18 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use email_address::EmailAddress;
-use glib::{closure_local, GString, Object};
+use glib::{closure_local, clone, GString, Object, source::PRIORITY_DEFAULT};
 use gtk::{
     gio, glib, CheckButton, DropDown, Entry, Expression, Label, ListBox, ListBoxRow,
     Orientation::Horizontal, PropertyExpression, Separator, SpinButton, StringList, StringObject,
     TextBuffer, TextView,
 };
+use gio::File;
 use input::*;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 use url::Url;
+use base64::{Engine as _, engine::general_purpose};
 // Custom widgets
 use crate::date::DateFormField;
 use crate::email::EmailFormField;
@@ -421,16 +423,27 @@ fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField)
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &FileFormField, id: String, file: gtk::gio::File, valid: bool| {
-            let id = form::ID::new(&id).unwrap();
-            let mut all_data = window.imp().form_data.borrow_mut();
-            let file_formatted = file.basename();
-            let file_formatted = file_formatted.map(|e| e.to_str().unwrap_or_default().to_string());
-            override_element_by_id(&mut all_data, id, InputTypes::File(file_formatted), valid);
+        closure_local!(@watch window => move |_form_field: &FileFormField, id: String, file: File, valid: bool| {
+            let ctx = glib::MainContext::default();
+            ctx.spawn_local(clone!(@weak file, @strong id, @weak window, @strong valid => async move {
+                let id = form::ID::new(&id).unwrap();
+                let mut all_data = window.imp().form_data.borrow_mut();
+                let encoded = match base64_encode_file(file).await {
+                    Ok(v) => Some(v),
+                    Err(_) => None,
+                };
+                override_element_by_id(&mut all_data, id, InputTypes::File(encoded), valid);
+            }));
         }),
     );
 
     widget
+}
+
+async fn base64_encode_file(file: File) -> Result<String, glib::Error> {
+    let reader = file.read_future(PRIORITY_DEFAULT).await?;
+    let bytes = reader.read_bytes_future(std::i32::MAX as usize, PRIORITY_DEFAULT).await?;
+    Ok(general_purpose::STANDARD.encode(bytes))
 }
 
 /// Returns an error if the id doesnt exist

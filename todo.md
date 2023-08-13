@@ -9,8 +9,8 @@
     - [ ] file
         - [X] Basic
         - [X] MIME type
-        - [ ] Functionality
-        - [ ] Serialize it
+        - [X] Functionality
+        - [X] Serialize it
         - [ ] Error
         - [ ] Max
     - [ ] Labels
