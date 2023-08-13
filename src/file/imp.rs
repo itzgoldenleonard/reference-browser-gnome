@@ -17,8 +17,10 @@ pub struct FileFormField {
 
     #[property(get, set)]
     id: RefCell<String>,
+    #[property(get, set = Self::valid_setter)]
+    valid: Cell<bool>,
     #[property(get, set)]
-    optional: Cell<bool>,
+    max_file_size: Cell<u32>,
 }
 
 #[glib::object_subclass]
@@ -29,7 +31,6 @@ impl ObjectSubclass for FileFormField {
 
     fn class_init(klass: &mut Self::Class) {
         klass.bind_template();
-        klass.bind_template_callbacks();
     }
 
     fn instance_init(obj: &InitializingObject<Self>) {
@@ -37,8 +38,16 @@ impl ObjectSubclass for FileFormField {
     }
 }
 
-#[gtk::template_callbacks]
-impl FileFormField {}
+impl FileFormField {
+    fn valid_setter(&self, valid: bool) {
+        if valid {
+            self.obj().remove_css_class("error");
+        } else {
+            self.obj().add_css_class("error");
+        }
+        self.valid.set(valid);
+    }
+}
 
 impl ObjectImpl for FileFormField {
     fn properties() -> &'static [ParamSpec] {
@@ -59,13 +68,16 @@ impl ObjectImpl for FileFormField {
 
     fn signals() -> &'static [Signal] {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
-            vec![Signal::builder("updated")
-                .param_types([
-                    String::static_type(),
-                    File::static_type(),
-                    bool::static_type(),
-                ])
-                .build()]
+            vec![
+                Signal::builder("updated")
+                    .param_types([
+                        String::static_type(),
+                        File::static_type(),
+                        bool::static_type(),
+                    ])
+                    .build(),
+                Signal::builder("too-big-file-selected").build(),
+            ]
         });
         SIGNALS.as_ref()
     }
@@ -76,7 +88,14 @@ impl ButtonImpl for FileFormField {
         let ctx = glib::MainContext::default();
         ctx.spawn_local(clone!(@weak self as button => async move {
             if let Ok(file) = button.picker.open_future(None::<&gtk::Window>).await {
+                if let Ok(size) = file.query_info("standard::size", gtk::gio::FileQueryInfoFlags::NONE, None::<&gtk::gio::Cancellable>) {
+                    let size = size.size();
+                    if size > button.obj().max_file_size() as i64 && button.obj().max_file_size() != 0 {
+                        return button.obj().emit_by_name::<()>("too-big-file-selected", &[]);
+                    }
+                };
                 button.obj().emit_by_name::<()>("updated", &[&button.obj().id(), &file, &true]);
+                button.obj().set_valid(true);
             }
         }));
     }

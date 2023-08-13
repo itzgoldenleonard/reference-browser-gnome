@@ -19,8 +19,12 @@ impl FileFormField {
         let widget: Self = Object::builder()
             .property("id", id.id())
             .property("label", label.clone())
-            .property("optional", field.global.optional)
+            .property("valid", field.global.optional)
             .build();
+
+        if let Some(max) = field.max {
+            widget.set_max_file_size(max.get());
+        }
 
         if let Some(mime_types) = field.allowed_types {
             let filter = FileFilter::new();

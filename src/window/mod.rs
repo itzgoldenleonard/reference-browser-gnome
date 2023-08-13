@@ -263,7 +263,7 @@ fn create_string_form_field(window: &Window, id: form::ID, field: form::StringFi
 fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringField) -> DropDown {
     let variants = field.variant.unwrap();
     let default = variants[0].clone();
-    let many_options = variants.len() >= 2;
+    let many_options = variants.len() >= 5;
     let string_list = StringList::new(&[]);
     for variant in variants {
         string_list.append(&variant);
@@ -434,6 +434,21 @@ fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField)
                 };
                 override_element_by_id(&mut all_data, id, InputTypes::File(encoded), valid);
             }));
+        }),
+    );
+
+    widget.connect_closure(
+        "too-big-file-selected",
+        false,
+        closure_local!(@watch window => move |field: FileFormField| {
+            let message = format!("File selected is too big, max size allowed is: {}B", field.max_file_size());
+            eprintln!("{message}");
+
+            let toast = adw::Toast::new(message.as_str());
+            window.imp().toaster.add_toast(toast);
+            if let Some(toast_widget) = window.imp().toaster.last_child() {
+                toast_widget.add_css_class("error");
+            }
         }),
     );
 

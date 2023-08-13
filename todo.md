@@ -6,14 +6,9 @@
     - [X] bool
     - [X] date
     - [X] email
-    - [ ] file
-        - [X] Basic
-        - [X] MIME type
-        - [X] Functionality
-        - [X] Serialize it
-        - [ ] Error
-        - [ ] Max
+    - [X] file
     - [ ] Labels
+- [ ] Try to do the same optimization for regular text lines as preformatted text lines to see if it resolves any performance problems
 - [ ] Mostly accurate form field validation
 - [ ] Multiple forms on 1 page
 - [ ] Form field validation from server (message)
