@@ -20,6 +20,7 @@ use std::time::{Duration, SystemTime};
 use url::Url;
 use base64::{Engine as _, engine::general_purpose};
 // Custom widgets
+use crate::integer::IntFormField;
 use crate::date::DateFormField;
 use crate::email::EmailFormField;
 use crate::file::FileFormField;
@@ -156,15 +157,10 @@ impl Window {
     }
 }
 
-fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -> SpinButton {
-    let min = field.min.unwrap_or(i64::MIN);
-    let max = field.max.unwrap_or(i64::MAX);
-    let step = field.step.unwrap_or(1);
-
-    let widget = SpinButton::with_range(min as f64, max as f64, step as f64);
-    widget.set_tooltip_text(Some(&id.id_cloned()));
-    widget.set_has_tooltip(false);
+fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -> IntFormField {
     let default = field.global.default.unwrap_or(0);
+
+    let widget = IntFormField::new(id.clone(), field);
 
     let new_input_data = Input {
         id,
@@ -173,16 +169,14 @@ fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -
     };
     window.imp().form_data.borrow_mut().push(new_input_data);
 
-    widget.set_value(default as f64);
-
     #[allow(unused_must_use)]
     widget.connect_closure(
-        "value-changed",
+        "updated",
         false,
-        closure_local!(@watch window => move |entry: &SpinButton| {
-            let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
+        closure_local!(@watch window => move |_: &IntFormField, id: String, value: i32, valid: bool| {
+            let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, InputTypes::Int(Some(entry.value_as_int().into())), true);
+            override_element_by_id(&mut all_data, id, InputTypes::Int(Some(value.into())), valid);
         }),
     );
 

@@ -1,7 +1,7 @@
 mod athn_document;
 mod submit;
 mod window;
-//mod integer;
+mod integer;
 mod date;
 mod email;
 mod file;

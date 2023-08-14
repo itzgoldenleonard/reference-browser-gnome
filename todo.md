@@ -7,7 +7,13 @@
     - [X] date
     - [X] email
     - [X] file
-    - [ ] Labels
+    - [X] Labels (also differentiate fields that look identical)
+        - [X] Int
+        - [ ] Float
+        - [ ] String
+        - [ ] Enum
+        - [ ] Email icon
+        - [ ] File icon
 - [ ] Try to do the same optimization for regular text lines as preformatted text lines to see if it resolves any performance problems
 - [ ] Mostly accurate form field validation
 - [ ] Multiple forms on 1 page

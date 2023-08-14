@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="AthnIntFormField" parent="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+            <object class="GtkLabel" id="label_widget">
+                <property name="halign">GTK_ALIGN_START</property>
+            </object>
+        </child>
+        <child>
+            <object class="GtkSpinButton" id="entry">
+                <signal name="value-changed" handler="on_entry_changed" swapped="true"/>
+                <property name="snap-to-ticks">true</property>
+            </object>
+        </child>
+    </template>
+</interface>

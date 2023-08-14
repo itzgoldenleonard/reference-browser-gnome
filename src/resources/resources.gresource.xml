@@ -5,5 +5,6 @@
         <file compressed="true" preprocess="xml-stripblanks">date_form_field.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">email_form_field.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">file_form_field.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">int_form_field.ui</file>
     </gresource>
 </gresources>
