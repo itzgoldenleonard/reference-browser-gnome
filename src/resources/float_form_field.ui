@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="AthnEmailFormField" parent="GtkBox">
+    <template class="AthnFloatFormField" parent="GtkBox">
         <property name="orientation">vertical</property>
         <child>
             <object class="GtkLabel" id="label_widget">
@@ -13,8 +13,9 @@
             </object>
         </child>
         <child>
-            <object class="GtkEntry" id="entry">
-                <signal name="changed" handler="on_entry_changed" swapped="true"/>
+            <object class="GtkSpinButton" id="entry">
+                <signal name="value-changed" handler="on_entry_changed" swapped="true"/>
+                <property name="snap-to-ticks">false</property>
             </object>
         </child>
     </template>

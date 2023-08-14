@@ -9,7 +9,8 @@
     - [X] file
     - [X] Labels (also differentiate fields that look identical)
         - [X] Int
-        - [ ] Float
+        - [X] Float
+        - [ ] Date
         - [ ] String
         - [ ] Enum
         - [ ] Email icon
