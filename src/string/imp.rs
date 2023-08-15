@@ -24,6 +24,8 @@ pub struct StringFormField {
     valid: Cell<bool>,
     #[property(get, set)]
     optional: Cell<bool>,
+    #[property(get, set)]
+    min_length: Cell<u32>,
 }
 
 #[glib::object_subclass]
@@ -49,18 +51,12 @@ impl StringFormField {
         let text = &entry.text();
         let obj = self.obj();
 
-        /*
-        let valid = if text.is_empty() && obj.optional() {
-            true
-        } else {
-            StringAddress::is_valid(text)
-        };
+        let valid = self.is_input_valid(&text);
         if obj.valid() != valid {
             obj.set_valid(valid)
         };
-        */
 
-        obj.emit_by_name::<()>("updated", &[&obj.id(), &text, &true]);
+        obj.emit_by_name::<()>("updated", &[&obj.id(), &text, &valid]);
     }
 
     fn valid_setter(&self, valid: bool) {
@@ -70,6 +66,16 @@ impl StringFormField {
             self.obj().add_css_class("error");
         }
         self.valid.set(valid);
+    }
+
+    pub fn is_input_valid(&self, input: &str) -> bool {
+        if (input.len() as u32) < self.obj().min_length() {
+            return false;
+        };
+        if input.is_empty() && !self.obj().optional() {
+            return false;
+        };
+        true
     }
 }
 

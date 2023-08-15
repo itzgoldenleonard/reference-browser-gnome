@@ -15,7 +15,17 @@ glib::wrapper! {
 impl StringFormField {
     pub fn new(id: form::ID, field: form::StringField) -> Self {
         let label = field.global.label.unwrap_or(id.id_cloned());
+        let default = field.global.default.unwrap_or_default();
         let optional = field.global.optional;
+
+        let min = field.min;
+        let label = format!(
+            "{label}{}",
+            match min {
+                None => "".to_string(),
+                Some(min) => format!(" (Minimum character count: {})", min.get()),
+            }
+        );
 
         let widget: Self = Object::builder()
             .property("id", id.id())
@@ -23,11 +33,18 @@ impl StringFormField {
             .property("optional", optional)
             .build();
 
-        if let Some(default) = field.global.default {
-            widget.imp().entry.set_text(default.as_str());
-        } else {
-            widget.set_valid(optional);
+        if let Some(min) = min {
+            widget.set_min_length(min.get());
         }
+        if let Some(max) = field.max {
+            widget.imp().entry.set_max_length(max.get() as i32);
+        }
+
+        widget.imp().entry.set_visibility(!field.secret);
+        widget.imp().entry.set_truncate_multiline(!field.multiline);
+
+        widget.imp().entry.set_text(default.as_str());
+        widget.set_valid(widget.imp().is_input_valid(&default));
 
         widget
     }

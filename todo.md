@@ -11,11 +11,7 @@
         - [X] Int
         - [X] Float
         - [X] Date
-        - [ ] String
-            - [X] Label
-            - [ ] Error support and styling
-            - [ ] Error when it's too short
-            - [ ] Write min length if there is one
+        - [X] String
         - [ ] Enum
         - [ ] Email icon
         - [ ] File icon
@@ -23,7 +19,7 @@
 - [ ] Mostly accurate form field validation
     - [X] int
     - [X] float
-    - [ ] string
+    - [X] string
     - [ ] enum
     - [X] bool
     - [X] email
