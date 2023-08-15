@@ -243,12 +243,10 @@ fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringFiel
     let default = field.global.default.clone();
     let widget = EnumFormField::new(id.clone(), field);
 
-    let valid = widget.imp().is_input_valid(&default.clone().unwrap_or_default());
-
     let new_input_data = Input {
         id,
         value: InputTypes::String(default),
-        valid,
+        valid: true,
     };
     window.imp().form_data.borrow_mut().push(new_input_data);
 
@@ -256,55 +254,14 @@ fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringFiel
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &EnumFormField, id: String, input: String, valid: bool| {
+        closure_local!(@watch window => move |_form_field: &EnumFormField, id: String, input: Option<String>, valid: bool| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, InputTypes::String(Some(input)), valid);
+            override_element_by_id(&mut all_data, id, InputTypes::String(input), valid);
         }),
     );
     /*
-    let variants = field.variant.unwrap();
     let default = variants[0].clone();
-    let many_options = variants.len() >= 5;
-    let string_list = StringList::new(&[]);
-    for variant in variants {
-        string_list.append(&variant);
-    }
-
-    let expression =
-        PropertyExpression::new(StringObject::static_type(), None::<Expression>, "string");
-    let widget = DropDown::new(Some(string_list), Some(expression));
-    widget.set_tooltip_text(Some(&id.id_cloned()));
-    widget.set_has_tooltip(false);
-    if many_options {
-        widget.set_enable_search(true);
-    }
-
-    let new_input_data = Input {
-        id,
-        value: InputTypes::String(Some(default)),
-        valid: true,
-    };
-    window.imp().form_data.borrow_mut().push(new_input_data);
-
-    #[allow(unused_must_use)]
-    widget.connect_closure(
-        "notify::selected-item",
-        false,
-        closure_local!(@watch window => move |entry: &DropDown, _pspec: &glib::ParamSpec| {
-            let id = form::ID::new(entry.tooltip_text().unwrap().as_str()).unwrap();
-            let mut all_data = window.imp().form_data.borrow_mut();
-            match entry.selected_item() {
-                None => {
-                    override_element_by_id(&mut all_data, id, InputTypes::String(None), true);
-                }
-                Some(item) => {
-                    let string = item.downcast_ref::<StringObject>().map(|s| s.string().to_string());
-                    override_element_by_id(&mut all_data, id, InputTypes::String(string), true);
-                }
-            }
-        }),
-    );
     */
 
     widget

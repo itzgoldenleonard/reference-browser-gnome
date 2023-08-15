@@ -1,7 +1,6 @@
 mod imp;
 
 use crate::athn_document::form;
-use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::Object;
 use gtk::glib;
@@ -15,17 +14,7 @@ glib::wrapper! {
 impl EnumFormField {
     pub fn new(id: form::ID, field: form::StringField) -> Self {
         let label = field.global.label.unwrap_or(id.id_cloned());
-        let default = field.global.default.unwrap_or_default();
         let optional = field.global.optional;
-
-        let min = field.min;
-        let label = format!(
-            "{label}{}",
-            match min {
-                None => "".to_string(),
-                Some(min) => format!(" (Minimum character count: {})", min.get()),
-            }
-        );
 
         let widget: Self = Object::builder()
             .property("id", id.id())
@@ -33,18 +22,14 @@ impl EnumFormField {
             .property("optional", optional)
             .build();
 
-        if let Some(min) = min {
-            widget.set_min_length(min.get());
-        }
-        if let Some(max) = field.max {
-            widget.imp().entry.set_max_length(max.get() as i32);
+        let string_list = &widget.imp().model;
+        let variants = field.variant.unwrap_or_default();
+        let many_options = variants.len() >= 5;
+        for variant in variants {
+            string_list.append(&variant);
         }
 
-        widget.imp().entry.set_visibility(!field.secret);
-        widget.imp().entry.set_truncate_multiline(!field.multiline);
-
-        widget.imp().entry.set_text(default.as_str());
-        widget.set_valid(widget.imp().is_input_valid(&default));
+        widget.imp().entry.set_enable_search(many_options);
 
         widget
     }

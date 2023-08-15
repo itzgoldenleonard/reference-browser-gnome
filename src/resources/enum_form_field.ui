@@ -13,8 +13,14 @@
             </object>
         </child>
         <child>
-            <object class="GtkEntry" id="entry">
-                <signal name="changed" handler="on_entry_changed" swapped="true"/>
+            <object class="GtkDropDown" id="entry">
+                <signal name="notify::selected-item" handler="on_entry_changed" swapped="true"/>
+                <property name="expression">
+                    <lookup type="GtkStringObject" name="string"/>
+                </property>
+                <property name="model">
+                    <object class="GtkStringList" id="model"/>
+                </property>
             </object>
         </child>
     </template>

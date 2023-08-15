@@ -3,7 +3,7 @@ use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
 use glib::subclass::Signal;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, CompositeTemplate, Entry, Label};
+use gtk::{glib, CompositeTemplate, DropDown, Label, StringObject, StringList};
 use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 
@@ -12,9 +12,11 @@ use std::cell::{Cell, RefCell};
 #[properties(wrapper_type = super::EnumFormField)]
 pub struct EnumFormField {
     #[template_child]
-    pub entry: TemplateChild<Entry>,
+    pub entry: TemplateChild<DropDown>,
     #[template_child]
     pub label_widget: TemplateChild<Label>,
+    #[template_child]
+    pub model: TemplateChild<StringList>,
 
     #[property(get, set)]
     id: RefCell<String>,
@@ -47,16 +49,12 @@ impl ObjectSubclass for EnumFormField {
 #[gtk::template_callbacks]
 impl EnumFormField {
     #[template_callback]
-    fn on_entry_changed(&self, entry: &Entry) {
-        let text = &entry.text();
+    fn on_entry_changed(&self, _pspec: &glib::ParamSpec, entry: &DropDown) {
+        let selected_item = entry.selected_item();
+        let selected_item = selected_item.map(|i| i.downcast_ref::<StringObject>().map(|s| s.string().to_string()).unwrap_or_default());
         let obj = self.obj();
 
-        let valid = self.is_input_valid(&text);
-        if obj.valid() != valid {
-            obj.set_valid(valid)
-        };
-
-        obj.emit_by_name::<()>("updated", &[&obj.id(), &text, &valid]);
+        obj.emit_by_name::<()>("updated", &[&obj.id(), &selected_item, &true]);
     }
 
     fn valid_setter(&self, valid: bool) {
@@ -66,16 +64,6 @@ impl EnumFormField {
             self.obj().add_css_class("error");
         }
         self.valid.set(valid);
-    }
-
-    pub fn is_input_valid(&self, input: &str) -> bool {
-        if (input.len() as u32) < self.obj().min_length() {
-            return false;
-        };
-        if input.is_empty() && !self.obj().optional() {
-            return false;
-        };
-        true
     }
 }
 
@@ -106,7 +94,7 @@ impl ObjectImpl for EnumFormField {
             vec![Signal::builder("updated")
                 .param_types([
                     String::static_type(),
-                    String::static_type(),
+                    Option::<String>::static_type(),
                     bool::static_type(),
                 ])
                 .build()]
