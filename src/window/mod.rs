@@ -6,27 +6,26 @@ use crate::athn_document::{line_types, line_types::MainLine, Document, Metadata}
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
+use base64::{engine::general_purpose, Engine as _};
 use email_address::EmailAddress;
-use glib::{closure_local, clone, GString, Object, source::PRIORITY_DEFAULT};
+use gio::File;
+use glib::{clone, closure_local, source::PRIORITY_DEFAULT, GString, Object};
 use gtk::{
-    gio, glib, CheckButton, DropDown, Expression, Label, ListBox, ListBoxRow,
-    Orientation::Horizontal, PropertyExpression, Separator, StringList, StringObject,
+    gio, glib, CheckButton, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
     TextBuffer, TextView,
 };
-use gio::File;
 use input::*;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 use url::Url;
-use base64::{Engine as _, engine::general_purpose};
 // Custom widgets
-use crate::integer::IntFormField;
-use crate::float::FloatFormField;
-use crate::string::StringFormField;
-use crate::enum_field::EnumFormField;
 use crate::date::DateFormField;
 use crate::email::EmailFormField;
+use crate::enum_field::EnumFormField;
 use crate::file::FileFormField;
+use crate::float::FloatFormField;
+use crate::integer::IntFormField;
+use crate::string::StringFormField;
 use crate::submit::SubmitFormField;
 
 glib::wrapper! {
@@ -186,7 +185,11 @@ fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -
     widget
 }
 
-fn create_float_form_field(window: &Window, id: form::ID, field: form::FloatField) -> FloatFormField {
+fn create_float_form_field(
+    window: &Window,
+    id: form::ID,
+    field: form::FloatField,
+) -> FloatFormField {
     let default = field.global.default.unwrap_or(0.001);
 
     let widget = FloatFormField::new(id.clone(), field);
@@ -212,11 +215,17 @@ fn create_float_form_field(window: &Window, id: form::ID, field: form::FloatFiel
     widget
 }
 
-fn create_string_form_field(window: &Window, id: form::ID, field: form::StringField) -> StringFormField {
+fn create_string_form_field(
+    window: &Window,
+    id: form::ID,
+    field: form::StringField,
+) -> StringFormField {
     let default = field.global.default.clone();
     let widget = StringFormField::new(id.clone(), field);
 
-    let valid = widget.imp().is_input_valid(&default.clone().unwrap_or_default());
+    let valid = widget
+        .imp()
+        .is_input_valid(&default.clone().unwrap_or_default());
 
     let new_input_data = Input {
         id,
@@ -239,9 +248,14 @@ fn create_string_form_field(window: &Window, id: form::ID, field: form::StringFi
     widget
 }
 
-fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringField) -> EnumFormField {
-    let default = field.global.default.clone();
+fn create_enum_form_field(
+    window: &Window,
+    id: form::ID,
+    field: form::StringField,
+) -> EnumFormField {
     let widget = EnumFormField::new(id.clone(), field);
+    let default = widget.imp().entry.selected_item();
+    let default = default.map(|v| crate::enum_field::extract_string_from_object(&v));
 
     let new_input_data = Input {
         id,
@@ -260,9 +274,6 @@ fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringFiel
             override_element_by_id(&mut all_data, id, InputTypes::String(input), valid);
         }),
     );
-    /*
-    let default = variants[0].clone();
-    */
 
     widget
 }
@@ -417,7 +428,9 @@ fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField)
 
 async fn base64_encode_file(file: File) -> Result<String, glib::Error> {
     let reader = file.read_future(PRIORITY_DEFAULT).await?;
-    let bytes = reader.read_bytes_future(std::i32::MAX as usize, PRIORITY_DEFAULT).await?;
+    let bytes = reader
+        .read_bytes_future(std::i32::MAX as usize, PRIORITY_DEFAULT)
+        .await?;
     Ok(general_purpose::STANDARD.encode(bytes))
 }
 

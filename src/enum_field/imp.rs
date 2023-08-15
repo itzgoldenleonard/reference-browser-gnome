@@ -1,9 +1,10 @@
+use super::extract_string_from_object;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use glib::subclass::InitializingObject;
 use glib::subclass::Signal;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, CompositeTemplate, DropDown, Label, StringObject, StringList};
+use gtk::{glib, CompositeTemplate, DropDown, Label, StringList};
 use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 
@@ -51,10 +52,13 @@ impl EnumFormField {
     #[template_callback]
     fn on_entry_changed(&self, _pspec: &glib::ParamSpec, entry: &DropDown) {
         let selected_item = entry.selected_item();
-        let selected_item = selected_item.map(|i| i.downcast_ref::<StringObject>().map(|s| s.string().to_string()).unwrap_or_default());
+        let selected_item = selected_item.map(|item| extract_string_from_object(&item));
         let obj = self.obj();
 
         obj.emit_by_name::<()>("updated", &[&obj.id(), &selected_item, &true]);
+        if selected_item.is_some_and(|e| e.is_empty()) {
+            entry.set_selected(u32::MAX);
+        }
     }
 
     fn valid_setter(&self, valid: bool) {
@@ -64,6 +68,21 @@ impl EnumFormField {
             self.obj().add_css_class("error");
         }
         self.valid.set(valid);
+    }
+
+    /// Selects inputted item in the dropdown if it's an option
+    /// if item is not an option it will select None
+    pub fn select_item(&self, item: Option<String>) {
+        let options = self.model.snapshot();
+        let item_idx = options
+            .iter()
+            .enumerate()
+            .find(|e| extract_string_from_object(e.1) == item.clone().unwrap_or_default())
+            .map(|r| r.0 as u32);
+
+        let optional = self.obj().optional();
+        self.entry
+            .set_selected(item_idx.unwrap_or(if optional { u32::MAX } else { 0 }));
     }
 }
 
