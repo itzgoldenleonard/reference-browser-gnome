@@ -4,7 +4,7 @@ use glib::subclass::InitializingObject;
 use glib::subclass::Signal;
 use glib::DateTime;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, Calendar, CompositeTemplate, SpinButton};
+use gtk::{glib, Calendar, CompositeTemplate, SpinButton, Label};
 use once_cell::sync::Lazy;
 use std::cell::RefCell;
 
@@ -18,9 +18,13 @@ pub struct DateFormField {
     pub hour: TemplateChild<SpinButton>,
     #[template_child]
     pub minute: TemplateChild<SpinButton>,
+    #[template_child]
+    pub label_widget: TemplateChild<Label>,
 
     #[property(get, set)]
     id: RefCell<String>,
+    #[property(get, set)]
+    label: RefCell<String>,
 }
 
 #[glib::object_subclass]
@@ -115,6 +119,11 @@ impl ObjectImpl for DateFormField {
 
     fn constructed(&self) {
         self.parent_constructed();
+
+        let obj = self.obj();
+        obj.bind_property::<Label>("label", self.label_widget.as_ref(), "label")
+            .sync_create()
+            .build();
     }
 
     fn signals() -> &'static [Signal] {

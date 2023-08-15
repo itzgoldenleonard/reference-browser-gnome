@@ -1,38 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
     <template class="AthnDateFormField" parent="GtkBox">
+        <property name="orientation">vertical</property>
         <child>
-            <object class="GtkCalendar" id="calendar">
-                <signal name="day-selected" handler="on_day_selected" swapped="true"/>
+            <object class="GtkLabel" id="label_widget">
+                <property name="halign">GTK_ALIGN_START</property>
+                <attributes>
+                    <attribute name="weight" value="PANGO_WEIGHT_BOLD"/>
+                </attributes>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">4</property>
             </object>
         </child>
         <child>
-            <object class="GtkSpinButton" id="hour">
-                <signal name="value_changed" handler="on_time_change" swapped="true"/>
-                <property name="orientation">vertical</property>
-                <property name="snap-to-ticks">true</property>
-                <property name="adjustment">
-                    <object class="GtkAdjustment">
-                        <property name="upper">23</property>
-                        <property name="lower">0</property>
-                        <property name="step-increment">1</property>
+            <object class="GtkBox">
+                <child>
+                    <object class="GtkCalendar" id="calendar">
+                        <signal name="day-selected" handler="on_day_selected" swapped="true"/>
                     </object>
-                </property>
-            </object>
-        </child>
-        <child>
-            <object class="GtkSpinButton" id="minute">
-                <signal name="value_changed" handler="on_time_change" swapped="true"/>
-                <signal name="wrapped" handler="on_minute_wrapped" swapped="true"/>
-                <property name="orientation">vertical</property>
-                <property name="wrap">true</property>
-                <property name="adjustment">
-                    <object class="GtkAdjustment">
-                        <property name="upper">59</property>
-                        <property name="lower">0</property>
-                        <property name="step-increment">1</property>
+                </child>
+                <child>
+                    <object class="GtkSpinButton" id="hour">
+                        <signal name="value_changed" handler="on_time_change" swapped="true"/>
+                        <property name="orientation">vertical</property>
+                        <property name="snap-to-ticks">true</property>
+                        <property name="adjustment">
+                            <object class="GtkAdjustment">
+                                <property name="upper">23</property>
+                                <property name="lower">0</property>
+                                <property name="step-increment">1</property>
+                            </object>
+                        </property>
                     </object>
-                </property>
+                </child>
+                <child>
+                    <object class="GtkSpinButton" id="minute">
+                        <signal name="value_changed" handler="on_time_change" swapped="true"/>
+                        <signal name="wrapped" handler="on_minute_wrapped" swapped="true"/>
+                        <property name="orientation">vertical</property>
+                        <property name="wrap">true</property>
+                        <property name="adjustment">
+                            <object class="GtkAdjustment">
+                                <property name="upper">59</property>
+                                <property name="lower">0</property>
+                                <property name="step-increment">1</property>
+                            </object>
+                        </property>
+                    </object>
+                </child>
             </object>
         </child>
     </template>

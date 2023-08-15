@@ -15,7 +15,12 @@ glib::wrapper! {
 
 impl DateFormField {
     pub fn new(id: form::ID, field: form::DateField) -> Self {
-        let widget: Self = Object::builder().property("id", id.id()).build();
+        let label = field.global.label.unwrap_or(id.id_cloned());
+
+        let widget: Self = Object::builder()
+            .property("id", id.id())
+            .property("label", label)
+            .build();
 
         if field.time {
             widget.imp().calendar.set_visible(false);

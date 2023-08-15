@@ -10,15 +10,22 @@
     - [X] Labels (also differentiate fields that look identical)
         - [X] Int
         - [X] Float
-        - [ ] Date
+        - [X] Date
         - [ ] String
         - [ ] Enum
         - [ ] Email icon
         - [ ] File icon
 - [ ] Try to do the same optimization for regular text lines as preformatted text lines to see if it resolves any performance problems
 - [ ] Mostly accurate form field validation
+    - [X] int
+    - [X] float
+    - [ ] string
+    - [ ] enum
+    - [X] bool
+    - [X] email
+    - [X] file
 - [ ] Multiple forms on 1 page
-- [ ] Form field validation from server (message)
+- [ ] Basic form field validation from server in the form of a message
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Add an option to use a custom language preference list
 - [ ] Submit to flathub
@@ -29,7 +36,6 @@
 
 # After first draft release
 ## Forms
-- [ ] The min property doesnt work on string fields
 - [ ] Secret string fields dont use the PasswordEntry widget
 - [ ] Multiline string fields only work if you paste multi line text into them
 - [ ] Optional boolean fields dont have a way to reset to undecided
