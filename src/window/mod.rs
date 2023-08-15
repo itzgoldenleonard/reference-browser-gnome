@@ -22,6 +22,7 @@ use base64::{Engine as _, engine::general_purpose};
 // Custom widgets
 use crate::integer::IntFormField;
 use crate::float::FloatFormField;
+use crate::string::StringFormField;
 use crate::date::DateFormField;
 use crate::email::EmailFormField;
 use crate::file::FileFormField;
@@ -210,7 +211,33 @@ fn create_float_form_field(window: &Window, id: form::ID, field: form::FloatFiel
     widget
 }
 
-fn create_string_form_field(window: &Window, id: form::ID, field: form::StringField) -> Entry {
+fn create_string_form_field(window: &Window, id: form::ID, field: form::StringField) -> StringFormField {
+    let default = field.global.default.clone();
+    let valid = if default.is_none() && field.global.optional == false {
+        false
+    } else {
+        true
+    };
+    let widget = StringFormField::new(id.clone(), field);
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::String(default),
+        valid,
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "updated",
+        false,
+        closure_local!(@watch window => move |_form_field: &StringFormField, id: String, input: String, valid: bool| {
+            let id = form::ID::new(&id).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            override_element_by_id(&mut all_data, id, InputTypes::String(Some(input)), valid);
+        }),
+    );
+    /*
     let max = field.max;
     let secret = field.secret;
     let multiline = field.multiline;
@@ -244,6 +271,7 @@ fn create_string_form_field(window: &Window, id: form::ID, field: form::StringFi
             override_element_by_id(&mut all_data, id, InputTypes::String(Some(entry.text().to_string())), true);
         }),
     );
+    */
 
     widget
 }

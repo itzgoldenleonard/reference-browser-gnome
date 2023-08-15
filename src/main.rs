@@ -3,6 +3,7 @@ mod submit;
 mod window;
 mod integer;
 mod float;
+mod string;
 mod date;
 mod email;
 mod file;
