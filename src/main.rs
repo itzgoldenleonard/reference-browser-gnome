@@ -1,12 +1,13 @@
 mod athn_document;
-mod submit;
-mod window;
-mod integer;
-mod float;
-mod string;
 mod date;
 mod email;
+mod enum_field;
 mod file;
+mod float;
+mod integer;
+mod string;
+mod submit;
+mod window;
 
 use adw::prelude::*;
 use adw::Application;

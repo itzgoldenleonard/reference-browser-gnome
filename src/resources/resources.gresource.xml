@@ -8,5 +8,6 @@
         <file compressed="true" preprocess="xml-stripblanks">int_form_field.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">float_form_field.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">string_form_field.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">enum_form_field.ui</file>
     </gresource>
 </gresources>

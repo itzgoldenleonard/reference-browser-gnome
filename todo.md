@@ -13,6 +13,9 @@
         - [X] Date
         - [X] String
         - [ ] Enum
+            - [X] Boilerplate
+            - [ ] Get everything to function as well as before
+            - [ ] Ability to select None if optional
         - [ ] Email icon
         - [ ] File icon
 - [ ] Try to do the same optimization for regular text lines as preformatted text lines to see if it resolves any performance problems

@@ -9,7 +9,7 @@ use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use email_address::EmailAddress;
 use glib::{closure_local, clone, GString, Object, source::PRIORITY_DEFAULT};
 use gtk::{
-    gio, glib, CheckButton, DropDown, Entry, Expression, Label, ListBox, ListBoxRow,
+    gio, glib, CheckButton, DropDown, Expression, Label, ListBox, ListBoxRow,
     Orientation::Horizontal, PropertyExpression, Separator, StringList, StringObject,
     TextBuffer, TextView,
 };
@@ -23,6 +23,7 @@ use base64::{Engine as _, engine::general_purpose};
 use crate::integer::IntFormField;
 use crate::float::FloatFormField;
 use crate::string::StringFormField;
+use crate::enum_field::EnumFormField;
 use crate::date::DateFormField;
 use crate::email::EmailFormField;
 use crate::file::FileFormField;
@@ -238,7 +239,30 @@ fn create_string_form_field(window: &Window, id: form::ID, field: form::StringFi
     widget
 }
 
-fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringField) -> DropDown {
+fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringField) -> EnumFormField {
+    let default = field.global.default.clone();
+    let widget = EnumFormField::new(id.clone(), field);
+
+    let valid = widget.imp().is_input_valid(&default.clone().unwrap_or_default());
+
+    let new_input_data = Input {
+        id,
+        value: InputTypes::String(default),
+        valid,
+    };
+    window.imp().form_data.borrow_mut().push(new_input_data);
+
+    #[allow(unused_must_use)]
+    widget.connect_closure(
+        "updated",
+        false,
+        closure_local!(@watch window => move |_form_field: &EnumFormField, id: String, input: String, valid: bool| {
+            let id = form::ID::new(&id).unwrap();
+            let mut all_data = window.imp().form_data.borrow_mut();
+            override_element_by_id(&mut all_data, id, InputTypes::String(Some(input)), valid);
+        }),
+    );
+    /*
     let variants = field.variant.unwrap();
     let default = variants[0].clone();
     let many_options = variants.len() >= 5;
@@ -281,6 +305,7 @@ fn create_enum_form_field(window: &Window, id: form::ID, field: form::StringFiel
             }
         }),
     );
+    */
 
     widget
 }
