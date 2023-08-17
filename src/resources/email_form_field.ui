@@ -15,6 +15,9 @@
         <child>
             <object class="GtkEntry" id="entry">
                 <signal name="changed" handler="on_entry_changed" swapped="true"/>
+                <property name="primary-icon-name">address-book-symbolic</property>
+                <property name="primary-icon-activatable">false</property>
+                <property name="primary-icon-sensitive">false</property>
             </object>
         </child>
     </template>

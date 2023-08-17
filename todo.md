@@ -1,29 +1,5 @@
 # Before first draft release
-- [ ] Render all the different form field types (of course they also have to work)
-    - [X] int
-    - [X] float
-    - [X] string
-    - [X] bool
-    - [X] date
-    - [X] email
-    - [X] file
-    - [X] Labels (also differentiate fields that look identical)
-        - [X] Int
-        - [X] Float
-        - [X] Date
-        - [X] String
-        - [X] Enum
-        - [ ] Email icon
-        - [ ] File icon
 - [ ] Try to do the same optimization for regular text lines as preformatted text lines to see if it resolves any performance problems
-- [ ] Mostly accurate form field validation
-    - [X] int
-    - [X] float
-    - [X] string
-    - [ ] enum
-    - [X] bool
-    - [X] email
-    - [X] file
 - [ ] Multiple forms on 1 page
 - [ ] Basic form field validation from server in the form of a message
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
@@ -47,3 +23,5 @@
     Make a FormFieldExt trait, and make every type of form field a subclassed class of the FormField parent class (I dont speak OOP). Give them all a unified API, make it so that you can down/upcast them between FormField and the subclass, give them some common signals that can be used to store their value in the Window, give them a common constructor so that they're easy to make with just an ID and a field enum, give them some common properties for things like server form field validation.
 - [ ] Proper server side form validation
 
+## Other
+- [ ] Use proper icons for admonitions

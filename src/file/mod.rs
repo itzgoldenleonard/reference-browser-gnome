@@ -18,9 +18,10 @@ impl FileFormField {
 
         let widget: Self = Object::builder()
             .property("id", id.id())
-            .property("label", label.clone())
             .property("valid", field.global.optional)
             .build();
+
+        widget.imp().label_widget.set_label(&label);
 
         if let Some(max) = field.max {
             widget.set_max_file_size(max.get());

@@ -5,6 +5,7 @@ use glib::subclass::Signal;
 use glib::{clone, ParamSpec, Properties, Value};
 use gtk::gio::File;
 use gtk::{glib, CompositeTemplate, FileDialog};
+use adw::ButtonContent;
 use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 
@@ -14,6 +15,8 @@ use std::cell::{Cell, RefCell};
 pub struct FileFormField {
     #[template_child]
     pub picker: TemplateChild<FileDialog>,
+    #[template_child]
+    pub label_widget: TemplateChild<ButtonContent>,
 
     #[property(get, set)]
     id: RefCell<String>,

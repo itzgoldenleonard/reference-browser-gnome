@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
     <template class="AthnFileFormField" parent="GtkButton">
-        <object class="GtkFileDialog" id="picker">
-        </object>
+        <property name="child">
+            <object class="AdwButtonContent" id="label_widget">
+                <property name="icon-name">file-manager-symbolic</property>
+                <property name="halign">GTK_ALIGN_START</property>
+            </object>
+          </property>
+        <object class="GtkFileDialog" id="picker"/>
     </template>
 </interface>
