@@ -194,5 +194,26 @@
 
             </object>
         </property>
+
+        <object class="GtkTextTagTable" id="text_block_tag_table">
+            <child type="tag">
+                <object class="GtkTextTag">
+                    <property name="name">italic</property>
+                    <property name="style">PANGO_STYLE_ITALIC</property>
+                </object>
+            </child>
+            <child type="tag">
+                <object class="GtkTextTag">
+                    <property name="name">bold</property>
+                    <property name="weight">700</property>
+                </object>
+            </child>
+            <child type="tag">
+                <object class="GtkTextTag">
+                    <property name="name">preformatted</property>
+                    <property name="family">Monospace</property>
+                </object>
+            </child>
+        </object>
     </template>
 </interface>

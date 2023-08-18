@@ -12,7 +12,7 @@ use gio::File;
 use glib::{clone, closure_local, source::PRIORITY_DEFAULT, GString, Object};
 use gtk::{
     gio, glib, CheckButton, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
-    TextBuffer, TextView,
+    TextBuffer, TextIter, TextTagTable, TextView
 };
 use input::*;
 use std::str::FromStr;
@@ -73,19 +73,33 @@ impl Window {
 
         for line in footer {
             match line {
-                TextLine(content) => self.imp().canvas.append(&create_text_line(content)),
+                TextLine(content) => match self.current_text_block() {
+                    None => self.imp().canvas.append(&(create_text_block(&self.imp().text_block_tag_table, content))),
+                    Some(text_block) => append_text_to_block(&text_block, content),
+                },
                 LinkLine(link) => self.imp().canvas.append(&create_link_line(link, base_url)),
             }
         }
     }
 
+    /// Returns the code block at the end of the canvas, returns 'None' if the last child of the canvas is not a code block
     fn current_code_block(&self) -> Option<TextView> {
-        // Returns the code block at the end of the canvas, returns 'None' if the last child of the canvas is not a code block
         self.imp()
             .canvas
             .last_child()?
             .last_child()
             .and_downcast::<TextView>()
+            .filter(|obj| obj.is_monospace())
+    }
+
+    /// Returns the text block at the end of the canvas, returns 'None' if the last child of the canvas is not a text block
+    fn current_text_block(&self) -> Option<TextView> {
+        self.imp()
+            .canvas
+            .last_child()?
+            .last_child()
+            .and_downcast::<TextView>()
+            .filter(|obj| !obj.is_monospace())
     }
 
     fn render_main_line(&self, line: MainLine, base_url: &Url) {
@@ -96,7 +110,10 @@ impl Window {
             };
         }
         match line {
-            TextLine(content) => append!(create_text_line(content)),
+            TextLine(content) => match self.current_text_block() {
+                None => append!(create_text_block(&self.imp().text_block_tag_table, content)),
+                Some(text_block) => append_text_to_block(&text_block, content),
+            },
             LinkLine(link) => append!(create_link_line(link, base_url)),
             PreformattedLine(_, content) => match self.current_code_block() {
                 None => append!(create_code_block(content)),
@@ -157,6 +174,32 @@ impl Window {
 
         self.imp().canvas.append(&Separator::new(Horizontal));
     }
+}
+
+fn create_text_block(tag_table: &TextTagTable, content: String) -> TextView {
+    let buffer = TextBuffer::builder().tag_table(&tag_table).build();
+
+    buffer.connect_changed(|buffer: &TextBuffer| {
+        println!("Buffer contents:");
+        println!("{}\n", buffer.text(&buffer.start_iter(), &buffer.end_iter(), false));
+    });
+    // It's important that the text is inserted after we've connected to the changed signal,
+    // otherwise the callback wont be called for the first line
+    buffer.insert_at_cursor(&content);
+
+    let widget = TextView::builder()
+        .editable(false)
+        .wrap_mode(gtk::WrapMode::WordChar)
+        .cursor_visible(false)
+        .build();
+    widget.set_buffer(Some(&buffer));
+
+    widget
+}
+
+fn append_text_to_block(text_view: &TextView, content: String) {
+    let buffer = text_view.buffer();
+    buffer.insert_at_cursor(format!("\n{}", content).as_str());
 }
 
 fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -> IntFormField {
@@ -589,63 +632,6 @@ fn create_subtitle(subtitle: Option<String>) -> Option<Label> {
 
 fn escape_pango_markup(s: String) -> String {
     s.replace("<", "&lt;")
-}
-
-fn convert_athn_formatting_to_pango(content: String) -> String {
-    //TODO: Perhaps make this a little less monolithic, that escaping pango markup could be a good
-    //function to have
-    content
-        .as_str()
-        .split("\\r")
-        .map(|s| {
-            // The whole thing with the vector with sorting and filtering and stuff
-            // is needed because pango needs the end tags to be in the reverse
-            // order of the start tags
-            let mut states = vec![
-                ("</b>", s.find("\\b")),
-                ("</i>", s.find("\\i")),
-                ("</tt>", s.find("\\p")),
-            ]
-            .iter()
-            .filter_map(|state| match state.1 {
-                None => None,
-                Some(n) => Some((state.0, n)),
-            })
-            .collect::<Vec<(&str, usize)>>();
-
-            // This is probably not the most efficient way to do this
-            let s = escape_pango_markup(s.into());
-            let s = s.replacen("\\b", "<b>", 1);
-            let s = s.replacen("\\i", "<i>", 1);
-            let s = s.replacen("\\p", "<tt>", 1);
-            let s = s.replace("\\b", "");
-            let s = s.replace("\\i", "");
-            let mut s = s.replace("\\p", "");
-
-            states.sort_unstable_by_key(|k| k.1);
-            states.reverse();
-            s.push_str(
-                states
-                    .iter()
-                    .map(|state| state.0.to_owned())
-                    .collect::<String>()
-                    .as_str(),
-            );
-
-            s
-        })
-        .collect()
-}
-
-fn create_text_line(content: String) -> Label {
-    let content = convert_athn_formatting_to_pango(content);
-    Label::builder()
-        .label(content)
-        .halign(gtk::Align::Start)
-        .use_markup(true)
-        .wrap(true)
-        .wrap_mode(gtk::pango::WrapMode::WordChar)
-        .build()
 }
 
 fn validate_url(url: &String, base_url: &Url) -> Result<String, url::ParseError> {

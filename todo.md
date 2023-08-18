@@ -1,5 +1,9 @@
 # Before first draft release
 - [ ] Try to do the same optimization for regular text lines as preformatted text lines to see if it resolves any performance problems
+    - [X] Get some sort of formatting into a text block
+    - [X] Find a good place to add the tags
+    - [ ] Create a function to add the tags in the right locations
+    - [ ] Remove the formatting characters
 - [ ] Multiple forms on 1 page
 - [ ] Basic form field validation from server in the form of a message
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)

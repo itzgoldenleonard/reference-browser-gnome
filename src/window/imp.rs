@@ -7,7 +7,7 @@ use adw::Leaflet;
 use core::fmt::Debug;
 use glib::subclass::InitializingObject;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry, Stack};
+use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry, Stack, TextTagTable};
 use std::cell::RefCell;
 use std::fs;
 use url::Url;
@@ -30,6 +30,8 @@ pub struct Window {
     pub toaster: TemplateChild<adw::ToastOverlay>,
     #[template_child]
     pub canvas: TemplateChild<ListBox>,
+    #[template_child]
+    pub text_block_tag_table: TemplateChild<TextTagTable>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
     pub form_data: RefCell<Vec<Input>>,
