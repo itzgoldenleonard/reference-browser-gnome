@@ -12,7 +12,7 @@ use gio::File;
 use glib::{clone, closure_local, source::PRIORITY_DEFAULT, GString, Object};
 use gtk::{
     gio, glib, CheckButton, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
-    TextBuffer, TextIter, TextTagTable, TextView
+    TextBuffer, TextIter, TextTagTable, TextView,
 };
 use input::*;
 use std::str::FromStr;
@@ -74,7 +74,10 @@ impl Window {
         for line in footer {
             match line {
                 TextLine(content) => match self.current_text_block() {
-                    None => self.imp().canvas.append(&(create_text_block(&self.imp().text_block_tag_table, content))),
+                    None => self
+                        .imp()
+                        .canvas
+                        .append(&(create_text_block(&self.imp().text_block_tag_table, content))),
                     Some(text_block) => append_text_to_block(&text_block, content),
                 },
                 LinkLine(link) => self.imp().canvas.append(&create_link_line(link, base_url)),
@@ -112,7 +115,11 @@ impl Window {
         match line {
             TextLine(content) => match self.current_text_block() {
                 None => append!(create_text_block(&self.imp().text_block_tag_table, content)),
-                Some(text_block) => append_text_to_block(&text_block, content),
+                Some(text_block) => {
+                    text_block
+                        .buffer()
+                        .insert_at_cursor(format!("\n{}", content).as_str());
+                }
             },
             LinkLine(link) => append!(create_link_line(link, base_url)),
             PreformattedLine(_, content) => match self.current_code_block() {
@@ -179,10 +186,7 @@ impl Window {
 fn create_text_block(tag_table: &TextTagTable, content: String) -> TextView {
     let buffer = TextBuffer::builder().tag_table(&tag_table).build();
 
-    buffer.connect_changed(|buffer: &TextBuffer| {
-        println!("Buffer contents:");
-        println!("{}\n", buffer.text(&buffer.start_iter(), &buffer.end_iter(), false));
-    });
+    buffer.connect_changed(apply_formatting_tags);
     // It's important that the text is inserted after we've connected to the changed signal,
     // otherwise the callback wont be called for the first line
     buffer.insert_at_cursor(&content);
@@ -195,6 +199,69 @@ fn create_text_block(tag_table: &TextTagTable, content: String) -> TextView {
     widget.set_buffer(Some(&buffer));
 
     widget
+}
+
+fn apply_formatting_tags(buffer: &TextBuffer) {
+    use gtk::TextSearchFlags as flags;
+
+    let end_of_buffer = buffer.end_iter();
+    let mut start_of_search = buffer.end_iter();
+    start_of_search.set_line_offset(0);
+    let start_of_last_line = start_of_search;
+    while !start_of_search.is_end() {
+        let bold_start = start_of_search
+            .forward_search("\\b", flags::VISIBLE_ONLY, Some(&end_of_buffer))
+            .map(|r| r.0);
+        let italic_start = start_of_search
+            .forward_search("\\i", flags::VISIBLE_ONLY, Some(&end_of_buffer))
+            .map(|r| r.0);
+        let preformatted_start = start_of_search
+            .forward_search("\\p", flags::VISIBLE_ONLY, Some(&end_of_buffer))
+            .map(|r| r.0);
+        let formatting_end = start_of_search
+            .forward_search("\\r", flags::VISIBLE_ONLY, Some(&end_of_buffer))
+            .map(|r| r.1)
+            .unwrap_or(end_of_buffer);
+
+        if let Some(bold_start) = bold_start {
+            if bold_start.in_range(&start_of_search, &formatting_end) {
+                buffer.apply_tag_by_name("bold", &bold_start, &formatting_end);
+            }
+        }
+        if let Some(italic_start) = italic_start {
+            if italic_start.in_range(&start_of_search, &formatting_end) {
+                buffer.apply_tag_by_name("italic", &italic_start, &formatting_end);
+            }
+        }
+        if let Some(preformatted_start) = preformatted_start {
+            if preformatted_start.in_range(&start_of_search, &formatting_end) {
+                buffer.apply_tag_by_name("preformatted", &preformatted_start, &formatting_end);
+            }
+        }
+        start_of_search = formatting_end;
+    }
+    remove_formatting_tags(buffer, &start_of_last_line, &end_of_buffer);
+}
+
+fn remove_formatting_tags(buffer: &TextBuffer, start: &TextIter, end: &TextIter) {
+    use gtk::TextSearchFlags as flags;
+    if let Some((mut tag_start, mut tag_end)) =
+        start.forward_search("\\b", flags::VISIBLE_ONLY, Some(end))
+    {
+        buffer.delete(&mut tag_start, &mut tag_end);
+    } else if let Some((mut tag_start, mut tag_end)) =
+        start.forward_search("\\i", flags::VISIBLE_ONLY, Some(end))
+    {
+        buffer.delete(&mut tag_start, &mut tag_end);
+    } else if let Some((mut tag_start, mut tag_end)) =
+        start.forward_search("\\p", flags::VISIBLE_ONLY, Some(end))
+    {
+        buffer.delete(&mut tag_start, &mut tag_end);
+    } else if let Some((mut tag_start, mut tag_end)) =
+        start.forward_search("\\r", flags::VISIBLE_ONLY, Some(end))
+    {
+        buffer.delete(&mut tag_start, &mut tag_end);
+    }
 }
 
 fn append_text_to_block(text_view: &TextView, content: String) {

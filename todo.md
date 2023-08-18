@@ -1,9 +1,4 @@
 # Before first draft release
-- [ ] Try to do the same optimization for regular text lines as preformatted text lines to see if it resolves any performance problems
-    - [X] Get some sort of formatting into a text block
-    - [X] Find a good place to add the tags
-    - [ ] Create a function to add the tags in the right locations
-    - [ ] Remove the formatting characters
 - [ ] Multiple forms on 1 page
 - [ ] Basic form field validation from server in the form of a message
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
@@ -25,6 +20,7 @@
 - [ ] Implement list fields
 - [ ] Do form fields properly
     Make a FormFieldExt trait, and make every type of form field a subclassed class of the FormField parent class (I dont speak OOP). Give them all a unified API, make it so that you can down/upcast them between FormField and the subclass, give them some common signals that can be used to store their value in the Window, give them a common constructor so that they're easy to make with just an ID and a field enum, give them some common properties for things like server form field validation.
+    Look into actions
 - [ ] Proper server side form validation
 
 ## Other
