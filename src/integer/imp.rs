@@ -5,7 +5,7 @@ use glib::subclass::Signal;
 use glib::{ParamSpec, Properties, Value};
 use gtk::{glib, CompositeTemplate, Label, SpinButton};
 use once_cell::sync::Lazy;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 #[derive(Default, CompositeTemplate, Properties)]
 #[template(resource = "/org/athn/browser/gnome/int_form_field.ui")]
@@ -16,6 +16,8 @@ pub struct IntFormField {
     #[template_child]
     pub label_widget: TemplateChild<Label>,
 
+    #[property(get, set)]
+    form_idx: Cell<u64>,
     #[property(get, set)]
     id: RefCell<String>,
     #[property(get, set)]
@@ -45,7 +47,7 @@ impl IntFormField {
         let value = &entry.value_as_int();
         let obj = self.obj();
 
-        obj.emit_by_name::<()>("updated", &[&obj.id(), &value, &true]);
+        obj.emit_by_name::<()>("updated", &[&obj.form_idx(), &obj.id(), &value, &true]);
     }
 }
 
@@ -75,6 +77,7 @@ impl ObjectImpl for IntFormField {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![Signal::builder("updated")
                 .param_types([
+                    u64::static_type(),
                     String::static_type(),
                     i32::static_type(),
                     bool::static_type(),

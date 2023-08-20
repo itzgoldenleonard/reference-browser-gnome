@@ -19,6 +19,8 @@ pub struct FileFormField {
     pub label_widget: TemplateChild<ButtonContent>,
 
     #[property(get, set)]
+    form_idx: Cell<u64>,
+    #[property(get, set)]
     id: RefCell<String>,
     #[property(get, set = Self::valid_setter)]
     valid: Cell<bool>,
@@ -74,6 +76,7 @@ impl ObjectImpl for FileFormField {
             vec![
                 Signal::builder("updated")
                     .param_types([
+                        u64::static_type(),
                         String::static_type(),
                         File::static_type(),
                         bool::static_type(),

@@ -6,7 +6,7 @@ use glib::DateTime;
 use glib::{ParamSpec, Properties, Value};
 use gtk::{glib, Calendar, CompositeTemplate, SpinButton, Label};
 use once_cell::sync::Lazy;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 #[derive(Default, CompositeTemplate, Properties)]
 #[template(resource = "/org/athn/browser/gnome/date_form_field.ui")]
@@ -21,6 +21,8 @@ pub struct DateFormField {
     #[template_child]
     pub label_widget: TemplateChild<Label>,
 
+    #[property(get, set)]
+    form_idx: Cell<u64>,
     #[property(get, set)]
     id: RefCell<String>,
     #[property(get, set)]
@@ -62,7 +64,7 @@ impl DateFormField {
     fn on_day_selected(&self, _calendar: &Calendar) {
         if let Ok(time) = self.get_time() {
             self.obj()
-                .emit_by_name::<()>("updated", &[&self.obj().id(), &time]);
+                .emit_by_name::<()>("updated", &[&self.obj().form_idx(), &self.obj().id(), &time]);
         }
     }
 
@@ -78,7 +80,7 @@ impl DateFormField {
 
         if let Ok(time) = self.get_time() {
             self.obj()
-                .emit_by_name::<()>("updated", &[&self.obj().id(), &time]);
+                .emit_by_name::<()>("updated", &[&self.obj().form_idx(), &self.obj().id(), &time]);
         }
     }
 
@@ -129,7 +131,7 @@ impl ObjectImpl for DateFormField {
     fn signals() -> &'static [Signal] {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![Signal::builder("updated")
-                .param_types([String::static_type(), DateTime::static_type()])
+                .param_types([u64::static_type(), String::static_type(), DateTime::static_type()])
                 .build()]
         });
         SIGNALS.as_ref()

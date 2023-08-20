@@ -11,7 +11,7 @@ pub enum MainLine {
     AdmonitionLine(AdmonitionType, String),
     HeadingLine(Level, String),
     QuoteLine(String),
-    FormFieldLine(u32, super::form::FormField),
+    FormFieldLine(usize, super::form::FormField),
 }
 
 #[derive(PartialEq, Debug)]

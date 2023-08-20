@@ -13,11 +13,12 @@ glib::wrapper! {
 }
 
 impl EmailFormField {
-    pub fn new(id: form::ID, field: form::EmailField) -> Self {
+    pub fn new(form_idx: usize, id: form::ID, field: form::EmailField) -> Self {
         let label = field.global.label.unwrap_or(id.id_cloned());
         let optional = field.global.optional;
 
         let widget: Self = Object::builder()
+            .property("form-idx", form_idx as u64)
             .property("id", id.id())
             .property("label", label)
             .property("optional", optional)

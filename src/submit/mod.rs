@@ -13,6 +13,7 @@ glib::wrapper! {
 impl SubmitFormField {
     /// You are expected to check that destination is a valid absolute URL or None
     pub fn new(
+        form_idx: usize,
         id: form::ID,
         label: Option<String>,
         destination: Option<String>,
@@ -25,6 +26,7 @@ impl SubmitFormField {
         let invalid_url = destination.is_none();
 
         Object::builder()
+            .property("form-idx", form_idx as u64)
             .property("label", label)
             .property("destination", destination.unwrap_or_default())
             .property("redirect", redirect)

@@ -54,7 +54,7 @@ pub struct MetadataBuilder {
 #[derive(Default)]
 pub struct ParserState {
     current_section: Section,
-    form_count: u32,
+    form_count: usize,
 }
 
 #[derive(Default)]

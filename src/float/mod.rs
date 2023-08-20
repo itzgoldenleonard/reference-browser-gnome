@@ -12,7 +12,7 @@ glib::wrapper! {
 }
 
 impl FloatFormField {
-    pub fn new(id: form::ID, field: form::FloatField) -> Self {
+    pub fn new(form_idx: usize, id: form::ID, field: form::FloatField) -> Self {
         let label = field.global.label.unwrap_or(id.id_cloned());
         let min = field.min.unwrap_or(f64::MIN);
         let max = field.max.unwrap_or(f64::MAX);
@@ -21,6 +21,7 @@ impl FloatFormField {
         let digits = calculate_digits(step).max(calculate_digits(default));
 
         let widget: Self = Object::builder()
+            .property("form-idx", form_idx as u64)
             .property("id", id.id())
             .property("label", label)
             .property("default", default)

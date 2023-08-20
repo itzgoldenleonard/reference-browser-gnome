@@ -20,15 +20,13 @@ pub struct EnumFormField {
     pub model: TemplateChild<StringList>,
 
     #[property(get, set)]
+    form_idx: Cell<u64>,
+    #[property(get, set)]
     id: RefCell<String>,
     #[property(get, set)]
     label: RefCell<String>,
-    #[property(get, set = Self::valid_setter)]
-    valid: Cell<bool>,
     #[property(get, set)]
     optional: Cell<bool>,
-    #[property(get, set)]
-    min_length: Cell<u32>,
 }
 
 #[glib::object_subclass]
@@ -55,19 +53,10 @@ impl EnumFormField {
         let selected_item = selected_item.map(|item| extract_string_from_object(&item));
         let obj = self.obj();
 
-        obj.emit_by_name::<()>("updated", &[&obj.id(), &selected_item, &true]);
+        obj.emit_by_name::<()>("updated", &[&obj.form_idx(), &obj.id(), &selected_item, &true]);
         if selected_item.is_some_and(|e| e.is_empty()) {
             entry.set_selected(u32::MAX);
         }
-    }
-
-    fn valid_setter(&self, valid: bool) {
-        if valid {
-            self.obj().remove_css_class("error");
-        } else {
-            self.obj().add_css_class("error");
-        }
-        self.valid.set(valid);
     }
 
     /// Selects inputted item in the dropdown if it's an option
@@ -112,6 +101,7 @@ impl ObjectImpl for EnumFormField {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![Signal::builder("updated")
                 .param_types([
+                    u64::static_type(),
                     String::static_type(),
                     Option::<String>::static_type(),
                     bool::static_type(),

@@ -137,13 +137,13 @@ impl Window {
             AdmonitionLine(type_, content) => append!(create_admonition_line(type_, content)),
             HeadingLine(level, content) => append!(create_heading_line(level, content)),
             QuoteLine(content) => append!(create_quote_line(content)),
-            FormFieldLine(_form_id, line) => {
-                self.render_form_field(line, base_url);
+            FormFieldLine(form_idx, line) => {
+                self.render_form_field(line, base_url, form_idx);
             }
         }
     }
 
-    fn render_form_field(&self, field: form::FormField, base_url: &Url) {
+    fn render_form_field(&self, field: form::FormField, base_url: &Url, form_idx: usize) {
         use form::FormField::*;
         macro_rules! append {
             ($x:expr) => {
@@ -151,17 +151,17 @@ impl Window {
             };
         }
         match field {
-            Submit(id, field) => append!(create_submit_form_field(self, id, field, base_url)),
-            Integer(id, field) => append!(create_int_form_field(self, id, field)),
-            Float(id, field) => append!(create_float_form_field(self, id, field)),
+            Submit(id, field) => append!(create_submit_form_field(self, form_idx, id, field, base_url)),
+            Integer(id, field) => append!(create_int_form_field(self, form_idx, id, field)),
+            Float(id, field) => append!(create_float_form_field(self, form_idx, id, field)),
             String(id, field) if field.variant.is_some() => {
-                append!(create_enum_form_field(self, id, field))
+                append!(create_enum_form_field(self, form_idx, id, field))
             }
-            String(id, field) => append!(create_string_form_field(self, id, field)),
-            Boolean(id, field) => append!(create_bool_form_field(self, id, field)),
-            Date(id, field) => append!(create_date_form_field(self, id, field)),
-            Email(id, field) => append!(create_email_form_field(self, id, field)),
-            File(id, field) => append!(create_file_form_field(self, id, field)),
+            String(id, field) => append!(create_string_form_field(self, form_idx, id, field)),
+            Boolean(id, field) => append!(create_bool_form_field(self, form_idx, id, field)),
+            Date(id, field) => append!(create_date_form_field(self, form_idx, id, field)),
+            Email(id, field) => append!(create_email_form_field(self, form_idx, id, field)),
+            File(id, field) => append!(create_file_form_field(self, form_idx, id, field)),
             _ => (),
         }
     }
@@ -269,26 +269,26 @@ fn append_text_to_block(text_view: &TextView, content: String) {
     buffer.insert_at_cursor(format!("\n{}", content).as_str());
 }
 
-fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -> IntFormField {
+fn create_int_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::IntField) -> IntFormField {
     let default = field.global.default.unwrap_or(0);
 
-    let widget = IntFormField::new(id.clone(), field);
+    let widget = IntFormField::new(form_idx, id.clone(), field);
 
     let new_input_data = Input {
         id,
         value: InputTypes::Int(Some(default)),
         valid: true,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_: &IntFormField, id: String, value: i32, valid: bool| {
+        closure_local!(@watch window => move |_: &IntFormField, form_idx: u64, id: String, value: i32, valid: bool| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, InputTypes::Int(Some(value.into())), valid);
+            override_element_by_id(&mut all_data[form_idx as usize], id, InputTypes::Int(Some(value.into())), valid);
         }),
     );
 
@@ -297,28 +297,29 @@ fn create_int_form_field(window: &Window, id: form::ID, field: form::IntField) -
 
 fn create_float_form_field(
     window: &Window,
+    form_idx: usize,
     id: form::ID,
     field: form::FloatField,
 ) -> FloatFormField {
     let default = field.global.default.unwrap_or(0.001);
 
-    let widget = FloatFormField::new(id.clone(), field);
+    let widget = FloatFormField::new(form_idx, id.clone(), field);
 
     let new_input_data = Input {
         id,
         value: InputTypes::Float(Some(default)),
         valid: true,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_: &FloatFormField, id: String, value: f64, valid: bool| {
+        closure_local!(@watch window => move |_: &FloatFormField, form_idx: u64, id: String, value: f64, valid: bool| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, InputTypes::Float(Some(value)), valid);
+            override_element_by_id(&mut all_data[form_idx as usize], id, InputTypes::Float(Some(value)), valid);
         }),
     );
 
@@ -327,11 +328,12 @@ fn create_float_form_field(
 
 fn create_string_form_field(
     window: &Window,
+    form_idx: usize,
     id: form::ID,
     field: form::StringField,
 ) -> StringFormField {
     let default = field.global.default.clone();
-    let widget = StringFormField::new(id.clone(), field);
+    let widget = StringFormField::new(form_idx, id.clone(), field);
 
     let valid = widget
         .imp()
@@ -342,16 +344,16 @@ fn create_string_form_field(
         value: InputTypes::String(default),
         valid,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &StringFormField, id: String, input: String, valid: bool| {
+        closure_local!(@watch window => move |_form_field: &StringFormField, form_idx: u64, id: String, input: String, valid: bool| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, InputTypes::String(Some(input)), valid);
+            override_element_by_id(&mut all_data[form_idx as usize], id, InputTypes::String(Some(input)), valid);
         }),
     );
 
@@ -360,10 +362,11 @@ fn create_string_form_field(
 
 fn create_enum_form_field(
     window: &Window,
+    form_idx: usize,
     id: form::ID,
     field: form::StringField,
 ) -> EnumFormField {
-    let widget = EnumFormField::new(id.clone(), field);
+    let widget = EnumFormField::new(form_idx, id.clone(), field);
     let default = widget.imp().entry.selected_item();
     let default = default.map(|v| crate::enum_field::extract_string_from_object(&v));
 
@@ -372,23 +375,23 @@ fn create_enum_form_field(
         value: InputTypes::String(default),
         valid: true,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &EnumFormField, id: String, input: Option<String>, valid: bool| {
+        closure_local!(@watch window => move |_form_field: &EnumFormField, form_idx: u64, id: String, input: Option<String>, valid: bool| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
-            override_element_by_id(&mut all_data, id, InputTypes::String(input), valid);
+            override_element_by_id(&mut all_data[form_idx as usize], id, InputTypes::String(input), valid);
         }),
     );
 
     widget
 }
 
-fn create_bool_form_field(window: &Window, id: form::ID, field: form::BoolField) -> CheckButton {
+fn create_bool_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::BoolField) -> CheckButton {
     let label = field.global.label.unwrap_or(id.id_cloned());
     let optional = field.global.optional;
     let default = match (field.global.default, optional) {
@@ -400,6 +403,7 @@ fn create_bool_form_field(window: &Window, id: form::ID, field: form::BoolField)
     let widget = CheckButton::with_label(&label);
     widget.set_tooltip_text(Some(&id.id_cloned()));
     widget.set_has_tooltip(false);
+    widget.set_widget_name(&form_idx.to_string());
     match default {
         Some(default) => widget.set_active(default),
         None => widget.set_inconsistent(true),
@@ -410,7 +414,7 @@ fn create_bool_form_field(window: &Window, id: form::ID, field: form::BoolField)
         value: InputTypes::Bool(default),
         valid: true,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
@@ -419,35 +423,36 @@ fn create_bool_form_field(window: &Window, id: form::ID, field: form::BoolField)
         closure_local!(@watch window => move |button: &CheckButton| {
             let id = form::ID::new(button.tooltip_text().unwrap().as_str()).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
+            let form_idx: usize = button.widget_name().parse().unwrap_or_default();
             button.set_inconsistent(false);
-            override_element_by_id(&mut all_data, id, InputTypes::Bool(Some(button.is_active())), true);
+            override_element_by_id(&mut all_data[form_idx], id, InputTypes::Bool(Some(button.is_active())), true);
         }),
     );
 
     widget
 }
 
-fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField) -> DateFormField {
+fn create_date_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::DateField) -> DateFormField {
     let default = field.global.default;
 
-    let widget = DateFormField::new(id.clone(), field);
+    let widget = DateFormField::new(form_idx, id.clone(), field);
 
     let new_input_data = Input {
         id,
         value: InputTypes::Date(default),
         valid: true,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &DateFormField, id: String, time: glib::DateTime| {
+        closure_local!(@watch window => move |_form_field: &DateFormField, form_idx: u64, id: String, time: glib::DateTime| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
             let time_formatted = SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(time.to_unix() as u64));
-            override_element_by_id(&mut all_data, id, InputTypes::Date(time_formatted), true);
+            override_element_by_id(&mut all_data[form_idx as usize], id, InputTypes::Date(time_formatted), true);
         }),
     );
 
@@ -456,6 +461,7 @@ fn create_date_form_field(window: &Window, id: form::ID, field: form::DateField)
 
 fn create_email_form_field(
     window: &Window,
+    form_idx: usize,
     id: form::ID,
     field: form::EmailField,
 ) -> EmailFormField {
@@ -465,46 +471,46 @@ fn create_email_form_field(
     } else {
         true
     };
-    let widget = EmailFormField::new(id.clone(), field);
+    let widget = EmailFormField::new(form_idx, id.clone(), field);
 
     let new_input_data = Input {
         id,
         value: InputTypes::Email(default),
         valid,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &EmailFormField, id: String, email: String, valid: bool| {
+        closure_local!(@watch window => move |_form_field: &EmailFormField, form_idx: u64, id: String, email: String, valid: bool| {
             let id = form::ID::new(&id).unwrap();
             let mut all_data = window.imp().form_data.borrow_mut();
             let email_formatted = EmailAddress::from_str(&email).ok();
-            override_element_by_id(&mut all_data, id, InputTypes::Email(email_formatted), valid);
+            override_element_by_id(&mut all_data[form_idx as usize], id, InputTypes::Email(email_formatted), valid);
         }),
     );
 
     widget
 }
 
-fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField) -> FileFormField {
+fn create_file_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::FileField) -> FileFormField {
     let optional = field.global.optional;
-    let widget = FileFormField::new(id.clone(), field);
+    let widget = FileFormField::new(form_idx, id.clone(), field);
 
     let new_input_data = Input {
         id,
         value: InputTypes::File(None),
         valid: optional,
     };
-    window.imp().form_data.borrow_mut().push(new_input_data);
+    window.imp().form_data.borrow_mut()[form_idx].push(new_input_data);
 
     #[allow(unused_must_use)]
     widget.connect_closure(
         "updated",
         false,
-        closure_local!(@watch window => move |_form_field: &FileFormField, id: String, file: File, valid: bool| {
+        closure_local!(@watch window => move |_form_field: &FileFormField, form_idx: u64, id: String, file: File, valid: bool| {
             let ctx = glib::MainContext::default();
             ctx.spawn_local(clone!(@weak file, @strong id, @weak window, @strong valid => async move {
                 let id = form::ID::new(&id).unwrap();
@@ -513,7 +519,7 @@ fn create_file_form_field(window: &Window, id: form::ID, field: form::FileField)
                     Ok(v) => Some(v),
                     Err(_) => None,
                 };
-                override_element_by_id(&mut all_data, id, InputTypes::File(encoded), valid);
+                override_element_by_id(&mut all_data[form_idx as usize], id, InputTypes::File(encoded), valid);
             }));
         }),
     );
@@ -559,20 +565,22 @@ fn override_element_by_id(
 
 fn create_submit_form_field(
     window: &Window,
+    form_idx: usize,
     id: form::ID,
     field: form::SubmitField,
     base_url: &Url,
 ) -> SubmitFormField {
     let url = validate_url(&field.destination, base_url).ok();
 
-    let widget = SubmitFormField::new(id, field.label, url, field.redirect);
+    let widget = SubmitFormField::new(form_idx, id, field.label, url, field.redirect);
 
     widget.connect_closure(
         "data-request",
         false,
         closure_local!(@watch window => move |button: SubmitFormField| {
-            button.set_invalid_form(!window.imp().is_form_valid());
-            button.set_serialized_data(serde_json::to_string(&window.imp().form_data).unwrap());
+            let form_idx = button.form_idx() as usize;
+            button.set_invalid_form(!window.imp().is_form_valid(form_idx));
+            button.set_serialized_data(serde_json::to_string(&window.imp().form_data.borrow()[form_idx]).unwrap());
         }),
     );
 
@@ -602,6 +610,8 @@ fn create_submit_form_field(
             }
         }),
     );
+
+    window.imp().form_data.borrow_mut().push(vec![]);
 
     widget
 }

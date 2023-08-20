@@ -17,6 +17,8 @@ pub struct FloatFormField {
     pub label_widget: TemplateChild<Label>,
 
     #[property(get, set)]
+    form_idx: Cell<u64>,
+    #[property(get, set)]
     id: RefCell<String>,
     #[property(get, set)]
     label: RefCell<String>,
@@ -51,7 +53,7 @@ impl FloatFormField {
             self.entry.set_value(closest_tick);
         }
 
-        obj.emit_by_name::<()>("updated", &[&obj.id(), &value, &true]);
+        obj.emit_by_name::<()>("updated", &[&obj.form_idx(), &obj.id(), &value, &true]);
     }
 
     pub fn closest_tick(&self, value: &f64) -> Option<f64> {
@@ -102,6 +104,7 @@ impl ObjectImpl for FloatFormField {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![Signal::builder("updated")
                 .param_types([
+                    u64::static_type(),
                     String::static_type(),
                     f64::static_type(),
                     bool::static_type(),

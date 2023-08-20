@@ -12,7 +12,7 @@ glib::wrapper! {
 }
 
 impl IntFormField {
-    pub fn new(id: form::ID, field: form::IntField) -> Self {
+    pub fn new(form_idx: usize, id: form::ID, field: form::IntField) -> Self {
         let label = field.global.label.unwrap_or(id.id_cloned());
         let min = field.min.unwrap_or(i64::MIN);
         let max = field.max.unwrap_or(i64::MAX);
@@ -20,6 +20,7 @@ impl IntFormField {
         let default = field.global.default.unwrap_or(0);
 
         let widget: Self = Object::builder()
+            .property("form-idx", form_idx as u64)
             .property("id", id.id())
             .property("label", label)
             .build();

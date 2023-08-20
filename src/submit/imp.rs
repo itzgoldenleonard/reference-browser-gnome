@@ -10,6 +10,8 @@ use std::cell::{Cell, RefCell};
 #[properties(wrapper_type = super::SubmitFormField)]
 pub struct SubmitFormField {
     #[property(get, set)]
+    pub form_idx: Cell<u64>,
+    #[property(get, set)]
     pub serialized_data: RefCell<String>,
     #[property(get, set)]
     pub destination: RefCell<String>,

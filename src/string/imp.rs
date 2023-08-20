@@ -17,6 +17,8 @@ pub struct StringFormField {
     pub label_widget: TemplateChild<Label>,
 
     #[property(get, set)]
+    form_idx: Cell<u64>,
+    #[property(get, set)]
     id: RefCell<String>,
     #[property(get, set)]
     label: RefCell<String>,
@@ -56,7 +58,7 @@ impl StringFormField {
             obj.set_valid(valid)
         };
 
-        obj.emit_by_name::<()>("updated", &[&obj.id(), &text, &valid]);
+        obj.emit_by_name::<()>("updated", &[&obj.form_idx(), &obj.id(), &text, &valid]);
     }
 
     fn valid_setter(&self, valid: bool) {
@@ -105,6 +107,7 @@ impl ObjectImpl for StringFormField {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![Signal::builder("updated")
                 .param_types([
+                    u64::static_type(),
                     String::static_type(),
                     String::static_type(),
                     bool::static_type(),

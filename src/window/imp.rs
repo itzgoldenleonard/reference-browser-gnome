@@ -34,7 +34,7 @@ pub struct Window {
     pub text_block_tag_table: TemplateChild<TextTagTable>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
-    pub form_data: RefCell<Vec<Input>>,
+    pub form_data: RefCell<Vec<Vec<Input>>>,
 }
 
 // Boilerplate
@@ -156,9 +156,9 @@ impl Window {
         self.request_error.set_label(err_message);
     }
 
-    pub fn is_form_valid(&self) -> bool {
+    pub fn is_form_valid(&self, form_idx: usize) -> bool {
         let data = self.form_data.borrow();
-        data.iter().find(|e| e.valid == false).is_none()
+        data[form_idx].iter().find(|e| e.valid == false).is_none()
     }
 
     #[template_callback]
