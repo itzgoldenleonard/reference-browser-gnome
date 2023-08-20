@@ -1,5 +1,4 @@
 # Before first draft release
-- [ ] Multiple forms on 1 page
 - [ ] Basic form field validation from server in the form of a message
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Add an option to use a custom language preference list

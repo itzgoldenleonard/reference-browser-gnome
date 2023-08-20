@@ -137,8 +137,8 @@ impl Window {
             AdmonitionLine(type_, content) => append!(create_admonition_line(type_, content)),
             HeadingLine(level, content) => append!(create_heading_line(level, content)),
             QuoteLine(content) => append!(create_quote_line(content)),
-            FormFieldLine(form_idx, line) => {
-                self.render_form_field(line, base_url, form_idx);
+            FormFieldLine(form_count, line) => {
+                self.render_form_field(line, base_url, form_count - 1);
             }
         }
     }
@@ -150,8 +150,15 @@ impl Window {
                 self.imp().canvas.append(&$x)
             };
         }
+        let mut form_data = self.imp().form_data.borrow_mut();
+        if form_data.is_empty() {
+            form_data.push(vec![]);
+        }
+        std::mem::drop(form_data);
         match field {
-            Submit(id, field) => append!(create_submit_form_field(self, form_idx, id, field, base_url)),
+            Submit(id, field) => append!(create_submit_form_field(
+                self, form_idx, id, field, base_url
+            )),
             Integer(id, field) => append!(create_int_form_field(self, form_idx, id, field)),
             Float(id, field) => append!(create_float_form_field(self, form_idx, id, field)),
             String(id, field) if field.variant.is_some() => {
@@ -269,7 +276,12 @@ fn append_text_to_block(text_view: &TextView, content: String) {
     buffer.insert_at_cursor(format!("\n{}", content).as_str());
 }
 
-fn create_int_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::IntField) -> IntFormField {
+fn create_int_form_field(
+    window: &Window,
+    form_idx: usize,
+    id: form::ID,
+    field: form::IntField,
+) -> IntFormField {
     let default = field.global.default.unwrap_or(0);
 
     let widget = IntFormField::new(form_idx, id.clone(), field);
@@ -391,7 +403,12 @@ fn create_enum_form_field(
     widget
 }
 
-fn create_bool_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::BoolField) -> CheckButton {
+fn create_bool_form_field(
+    window: &Window,
+    form_idx: usize,
+    id: form::ID,
+    field: form::BoolField,
+) -> CheckButton {
     let label = field.global.label.unwrap_or(id.id_cloned());
     let optional = field.global.optional;
     let default = match (field.global.default, optional) {
@@ -432,7 +449,12 @@ fn create_bool_form_field(window: &Window, form_idx: usize, id: form::ID, field:
     widget
 }
 
-fn create_date_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::DateField) -> DateFormField {
+fn create_date_form_field(
+    window: &Window,
+    form_idx: usize,
+    id: form::ID,
+    field: form::DateField,
+) -> DateFormField {
     let default = field.global.default;
 
     let widget = DateFormField::new(form_idx, id.clone(), field);
@@ -495,7 +517,12 @@ fn create_email_form_field(
     widget
 }
 
-fn create_file_form_field(window: &Window, form_idx: usize, id: form::ID, field: form::FileField) -> FileFormField {
+fn create_file_form_field(
+    window: &Window,
+    form_idx: usize,
+    id: form::ID,
+    field: form::FileField,
+) -> FileFormField {
     let optional = field.global.optional;
     let widget = FileFormField::new(form_idx, id.clone(), field);
 
