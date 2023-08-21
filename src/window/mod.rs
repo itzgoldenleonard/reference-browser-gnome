@@ -885,10 +885,9 @@ fn create_admonition_line(type_: line_types::AdmonitionType, content: String) ->
     let label = ButtonContent::builder()
         .label(content)
         .icon_name(match type_ {
-            //TODO: Add proper icons
             Note => "question-symbolic",
             Warning => "warning-symbolic",
-            Danger => "error-symbolic",
+            Danger => "junk-symbolic",
         })
         .build();
 

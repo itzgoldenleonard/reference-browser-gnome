@@ -20,6 +20,3 @@
 - [ ] Implement tel fields
 - [ ] Implement list fields
 - [ ] Proper server side form validation
-
-## Other
-- [ ] Use proper icons for admonitions
