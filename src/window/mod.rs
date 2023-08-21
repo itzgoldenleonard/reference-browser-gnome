@@ -9,6 +9,7 @@ use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use base64::{engine::general_purpose, Engine as _};
 use email_address::EmailAddress;
 use gio::File;
+use serde::Deserialize;
 use glib::{clone, closure_local, source::PRIORITY_DEFAULT, GString, Object};
 use gtk::{
     gio, glib, CheckButton, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
@@ -638,9 +639,43 @@ fn create_submit_form_field(
         }),
     );
 
+    widget.connect_closure(
+        "server_validation-error",
+        false,
+        closure_local!(@watch window => move |_button: SubmitFormField, validation_error: std::string::String| {
+            let message = "The server responded with the following error";
+            eprintln!("{message}:");
+            eprintln!("{validation_error}");
+
+            let toast = adw::Toast::new(message);
+            toast.set_timeout(0);
+            window.imp().toaster.add_toast(toast);
+            if let Some(toast_widget) = window.imp().toaster.last_child() {
+                toast_widget.add_css_class("error");
+            }
+
+            window.imp().server_error_window.set_visible(true);
+            let buffer = &window.imp().server_error_buffer;
+
+            let errors: serde_json::Result<Vec<FormValidation>> = serde_json::from_str(&validation_error);
+            buffer.set_text(&match errors {
+                Ok(errors) => errors.iter().map(|error| format!("Field {}: {}\n", error.id, error.message)).collect(),
+                Err(_) => "The browser was unable to understand the error message from the server".to_string(),
+            });
+        }),
+    );
+
     window.imp().form_data.borrow_mut().push(vec![]);
 
     widget
+}
+
+#[derive(Deserialize)]
+struct FormValidation {
+    pub id: String,
+    pub message: String,
+    #[allow(dead_code)]
+    pub idx: Option<usize>,
 }
 
 fn list_box_map(list_box: &ListBox, map: fn(widget: &ListBoxRow, parent: &ListBox)) {

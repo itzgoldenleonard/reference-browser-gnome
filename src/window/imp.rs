@@ -7,7 +7,7 @@ use adw::Leaflet;
 use core::fmt::Debug;
 use glib::subclass::InitializingObject;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry, Stack, TextTagTable};
+use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry, Stack, TextTagTable, ScrolledWindow, TextBuffer};
 use std::cell::RefCell;
 use std::fs;
 use url::Url;
@@ -32,6 +32,10 @@ pub struct Window {
     pub canvas: TemplateChild<ListBox>,
     #[template_child]
     pub text_block_tag_table: TemplateChild<TextTagTable>,
+    #[template_child]
+    pub server_error_window: TemplateChild<ScrolledWindow>,
+    #[template_child]
+    pub server_error_buffer: TemplateChild<TextBuffer>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
     pub form_data: RefCell<Vec<Vec<Input>>>,
@@ -148,6 +152,7 @@ impl Window {
             Ok(val) => val.build(),
         };
 
+        self.server_error_window.set_visible(false);
         self.obj().render(document, base_url);
     }
 

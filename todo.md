@@ -1,5 +1,4 @@
 # Before first draft release
-- [ ] Basic form field validation from server in the form of a message
 - [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Add an option to use a custom language preference list
 - [ ] Submit to flathub
@@ -10,6 +9,9 @@
 
 # After first draft release
 ## Forms
+- [ ] Do form fields properly
+    Make a FormFieldExt trait, and make every type of form field a subclassed class of the FormField parent class (I dont speak OOP). Give them all a unified API, make it so that you can down/upcast them between FormField and the subclass, give them some common signals that can be used to store their value in the Window, give them a common constructor so that they're easy to make with just an ID and a field enum, give them some common properties for things like server form field validation.
+    Look into actions
 - [ ] Secret string fields dont use the PasswordEntry widget
 - [ ] Multiline string fields only work if you paste multi line text into them
 - [ ] Optional boolean fields dont have a way to reset to undecided
@@ -17,9 +19,6 @@
 - [ ] Timeonly form fields behave weirdly with timezones
 - [ ] Implement tel fields
 - [ ] Implement list fields
-- [ ] Do form fields properly
-    Make a FormFieldExt trait, and make every type of form field a subclassed class of the FormField parent class (I dont speak OOP). Give them all a unified API, make it so that you can down/upcast them between FormField and the subclass, give them some common signals that can be used to store their value in the Window, give them a common constructor so that they're easy to make with just an ID and a field enum, give them some common properties for things like server form field validation.
-    Look into actions
 - [ ] Proper server side form validation
 
 ## Other

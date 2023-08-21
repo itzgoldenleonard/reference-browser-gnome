@@ -5,6 +5,7 @@ use glib::{clone, ParamSpec, Properties, Value};
 use gtk::glib;
 use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
+use reqwest::{StatusCode, Client, Response};
 
 #[derive(Default, Properties)]
 #[properties(wrapper_type = super::SubmitFormField)]
@@ -72,6 +73,9 @@ impl ObjectImpl for SubmitFormField {
                 Signal::builder("submit-error")
                     .param_types([String::static_type()])
                     .build(),
+                Signal::builder("server-validation-error")
+                    .param_types([String::static_type()])
+                    .build(),
                 Signal::builder("data-request")
                     //.param_types([String::static_type()])
                     .build(),
@@ -83,13 +87,14 @@ impl ObjectImpl for SubmitFormField {
 impl WidgetImpl for SubmitFormField {}
 impl ButtonImpl for SubmitFormField {
     fn clicked(&self) {
-        self.obj().emit_by_name::<()>("data-request", &[]);
         if self.obj().invalid_form() {
             return self.obj().emit_by_name::<()>(
                 "submit-error",
                 &[&"A form field in this form is invalid".to_string()],
             );
         }
+
+        self.obj().emit_by_name::<()>("data-request", &[]);
 
         /*
         let response = match post(self.obj().destination(), self.obj().serialized_data()) {
@@ -108,7 +113,18 @@ impl ButtonImpl for SubmitFormField {
         let ctx = glib::MainContext::default();
         ctx.spawn_local(clone!(@weak self as button => async move {
             let response = match post(button.obj().destination(), button.obj().serialized_data()) {
-                Ok(val) => val,
+                Ok(val) if val.status().is_success() => val.text().await.unwrap_or_default(),
+                Ok(e) if e.status() == StatusCode::IM_A_TEAPOT => {
+                    return button
+                        .obj()
+                        .emit_by_name::<()>("server-validation-error", &[&e.text().await.unwrap_or_default()]);
+
+                }
+                Ok(e) => {
+                    return button
+                        .obj()
+                        .emit_by_name::<()>("submit-error", &[&e.error_for_status().unwrap_err().to_string()]);
+                }
                 Err(e) => {
                     return button
                         .obj()
@@ -123,11 +139,11 @@ impl ButtonImpl for SubmitFormField {
 }
 
 #[tokio::main]
-async fn post(destination: String, body: String) -> reqwest::Result<String> {
-    let https_client = reqwest::Client::builder()
+async fn post(destination: String, body: String) -> reqwest::Result<Response> {
+    let https_client = Client::builder()
         .danger_accept_invalid_certs(true)
         .build()?;
-    let response = https_client.post(destination).body(body).send().await?;
-    let response = response.error_for_status()?;
-    response.text().await
+    https_client.post(destination).body(body).send().await
+    //let response = response.error_for_status()?;
+    //response.text().await
 }
