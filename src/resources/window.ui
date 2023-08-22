@@ -97,6 +97,14 @@
                                         </child>
                                     </object>
                                 </child>
+
+                                <child type="end">
+                                    <object class="GtkButton">
+                                        <signal name="clicked" handler="on_show_settings_pressed" swapped="true"/>
+                                        <property name="icon-name">settings-symbolic</property>
+                                        <property name="tooltip-text" translatable="yes">Show settings</property>
+                                    </object>
+                                </child>
                             </object>
                         </child>
 
@@ -203,6 +211,28 @@
                                                         </style>
                                                     </object>
                                                 </property>
+                                            </object>
+                                        </property>
+                                    </object>
+                                </child>
+
+                                <!-- Settings -->
+                                <child>
+                                    <object class="GtkStackPage">
+                                        <property name="name">settings</property>
+                                        <property name="child">
+                                            <object class="GtkBox">
+                                                <property name="orientation">vertical</property>
+                                                <child>
+                                                    <object class="GtkLabel">
+                                                        <property name="label">Language preference list</property>
+                                                    </object>
+                                                </child>
+                                                <child>
+                                                    <object class="GtkEntry">
+                                                        <signal name="changed" handler="on_language_preference_update" swapped="true"/>
+                                                    </object>
+                                                </child>
                                             </object>
                                         </property>
                                     </object>

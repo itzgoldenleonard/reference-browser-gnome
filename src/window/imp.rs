@@ -189,6 +189,11 @@ impl Window {
     }
 
     #[template_callback]
+    fn on_show_settings_pressed(&self, _button: &gtk::Button) {
+        self.stack.set_visible_child_name("settings");
+    }
+
+    #[template_callback]
     fn on_header_entry_activated(&self, row: &gtk::ListBoxRow) {
         let row_label = match row.child().and_downcast::<Label>() {
             Some(row_label) => row_label,
@@ -199,6 +204,11 @@ impl Window {
             None => return eprintln!("A header entry without a url in its tooltip was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues"),
         };
         self.obj().set_uri(entry_url);
+    }
+
+    #[template_callback]
+    fn on_language_preference_update(&self, entry: &gtk::Entry) {
+        println!("{}", entry.text());
     }
 }
 

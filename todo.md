@@ -1,6 +1,11 @@
 # Before first draft release
-- [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Add an option to use a custom language preference list
+    - [X] Make a settings window
+    - [X] Add an entry where you can type in your language preference
+    - [ ] Save it across boots
+    - [ ] Make the requests with that language preference
+- [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
+- [ ] Make links open in the browser
 - [ ] Submit to flathub
 
 # Bugs

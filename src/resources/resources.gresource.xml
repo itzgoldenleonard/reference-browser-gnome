@@ -16,5 +16,6 @@
         <file preprocess="xml-stripblanks" alias="question-symbolic.svg">icons/question-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="warning-symbolic.svg">icons/warning-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="junk-symbolic.svg">icons/junk-symbolic.svg</file>
+        <file preprocess="xml-stripblanks" alias="settings-symbolic.svg">icons/settings-symbolic.svg</file>
     </gresource>
 </gresources>
