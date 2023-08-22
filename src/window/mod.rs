@@ -9,13 +9,13 @@ use adw::{ActionRow, Application, ButtonContent, ExpanderRow};
 use base64::{engine::general_purpose, Engine as _};
 use email_address::EmailAddress;
 use gio::File;
-use serde::Deserialize;
 use glib::{clone, closure_local, source::PRIORITY_DEFAULT, GString, Object};
 use gtk::{
     gio, glib, CheckButton, Label, ListBox, ListBoxRow, Orientation::Horizontal, Separator,
     TextBuffer, TextIter, TextTagTable, TextView,
 };
 use input::*;
+use serde::Deserialize;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 use url::Url;
@@ -599,8 +599,22 @@ fn create_submit_form_field(
     base_url: &Url,
 ) -> SubmitFormField {
     let url = validate_url(&field.destination, base_url).ok();
+    let language_string = window
+        .imp()
+        .settings
+        .borrow()
+        .clone()
+        .map(|settings| settings.string("language-preference"))
+        .unwrap_or_default();
 
-    let widget = SubmitFormField::new(form_idx, id, field.label, url, field.redirect);
+    let widget = SubmitFormField::new(
+        form_idx,
+        id,
+        field.label,
+        url,
+        field.redirect,
+        language_string.to_string(),
+    );
 
     widget.connect_closure(
         "data-request",

@@ -18,6 +18,7 @@ impl SubmitFormField {
         label: Option<String>,
         destination: Option<String>,
         redirect: bool,
+        language_string: String,
     ) -> Self {
         let label = match label {
             None => id.id(),
@@ -31,6 +32,7 @@ impl SubmitFormField {
             .property("destination", destination.unwrap_or_default())
             .property("redirect", redirect)
             .property("invalid-url", invalid_url)
+            .property("language-string", language_string)
             .build()
     }
 }

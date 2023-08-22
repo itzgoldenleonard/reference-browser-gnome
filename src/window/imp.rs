@@ -5,9 +5,13 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use adw::Leaflet;
 use core::fmt::Debug;
+use gio::Settings;
 use glib::subclass::InitializingObject;
 use glib::{ParamSpec, Properties, Value};
-use gtk::{glib, CompositeTemplate, Label, ListBox, SearchEntry, Stack, TextTagTable, ScrolledWindow, TextBuffer};
+use gtk::{
+    gio, glib, CompositeTemplate, Entry, Label, ListBox, ScrolledWindow, SearchEntry, Stack,
+    TextBuffer, TextTagTable,
+};
 use std::cell::RefCell;
 use std::fs;
 use url::Url;
@@ -36,9 +40,12 @@ pub struct Window {
     pub server_error_window: TemplateChild<ScrolledWindow>,
     #[template_child]
     pub server_error_buffer: TemplateChild<TextBuffer>,
+    #[template_child]
+    pub language_preference_entry: TemplateChild<Entry>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
     pub form_data: RefCell<Vec<Vec<Input>>>,
+    pub settings: RefCell<Option<Settings>>,
 }
 
 // Boilerplate
@@ -68,9 +75,9 @@ fn validate_url(url: &str) -> Result<Url, url::ParseError> {
     }
 }
 
-fn get_document(url: &Url) -> Result<String, String> {
+fn get_document(url: &Url, language_string: &str) -> Result<String, String> {
     match url.scheme() {
-        "https" => get_document_by_https(url).map_err(|e| e.to_string()),
+        "https" => get_document_by_https(url, language_string).map_err(|e| e.to_string()),
         "file" => get_document_by_file(url).map_err(|e| e.to_string()),
         _ => Err("Unsupported protocol".to_string()),
     }
@@ -81,12 +88,15 @@ fn get_document_by_file(url: &Url) -> Result<String, std::io::Error> {
     fs::read_to_string(url.path())
 }
 
-fn get_document_by_https(url: &Url) -> reqwest::Result<String> {
+fn get_document_by_https(url: &Url, language_string: &str) -> reqwest::Result<String> {
     let https_client = reqwest::blocking::Client::builder()
         .danger_accept_invalid_certs(true)
         .build()?;
 
-    let response = https_client.get(url.clone()).send()?;
+    let response = https_client
+        .get(url.clone())
+        .header(reqwest::header::ACCEPT_LANGUAGE, language_string)
+        .send()?;
 
     response.text()
 }
@@ -109,7 +119,14 @@ impl Window {
         *self.uri.borrow_mut() = url.to_string();
         *self.form_data.borrow_mut() = vec![];
 
-        let response = get_document(&url);
+        let language_string = self
+            .settings
+            .borrow()
+            .clone()
+            .map(|settings| settings.string("language-preference"))
+            .unwrap_or_default();
+
+        let response = get_document(&url, &language_string);
         let response = match response {
             Err(e) => return self.set_request_error(&e),
             Ok(val) => val,
@@ -205,11 +222,6 @@ impl Window {
         };
         self.obj().set_uri(entry_url);
     }
-
-    #[template_callback]
-    fn on_language_preference_update(&self, entry: &gtk::Entry) {
-        println!("{}", entry.text());
-    }
 }
 
 // More boilerplate
@@ -228,6 +240,15 @@ impl ObjectImpl for Window {
 
     fn constructed(&self) {
         self.parent_constructed();
+        let settings = Settings::new("org.athn.browser.gnome");
+        settings
+            .bind(
+                "language-preference",
+                &self.language_preference_entry.try_get().unwrap(),
+                "text",
+            )
+            .build();
+        *self.settings.borrow_mut() = Some(settings);
     }
 }
 impl WidgetImpl for Window {}

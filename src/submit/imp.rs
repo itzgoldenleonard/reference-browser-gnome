@@ -4,8 +4,8 @@ use glib::subclass::Signal;
 use glib::{clone, ParamSpec, Properties, Value};
 use gtk::glib;
 use once_cell::sync::Lazy;
+use reqwest::{Client, Response, StatusCode};
 use std::cell::{Cell, RefCell};
-use reqwest::{StatusCode, Client, Response};
 
 #[derive(Default, Properties)]
 #[properties(wrapper_type = super::SubmitFormField)]
@@ -14,6 +14,8 @@ pub struct SubmitFormField {
     pub form_idx: Cell<u64>,
     #[property(get, set)]
     pub serialized_data: RefCell<String>,
+    #[property(get, set)]
+    pub language_string: RefCell<String>,
     #[property(get, set)]
     pub destination: RefCell<String>,
     #[property(get, set)]
@@ -112,7 +114,8 @@ impl ButtonImpl for SubmitFormField {
 
         let ctx = glib::MainContext::default();
         ctx.spawn_local(clone!(@weak self as button => async move {
-            let response = match post(button.obj().destination(), button.obj().serialized_data()) {
+            let language_string = button.obj().language_string();
+            let response = match post(button.obj().destination(), button.obj().serialized_data(), language_string) {
                 Ok(val) if val.status().is_success() => val.text().await.unwrap_or_default(),
                 Ok(e) if e.status() == StatusCode::IM_A_TEAPOT => {
                     return button
@@ -139,11 +142,20 @@ impl ButtonImpl for SubmitFormField {
 }
 
 #[tokio::main]
-async fn post(destination: String, body: String) -> reqwest::Result<Response> {
+async fn post(
+    destination: String,
+    body: String,
+    language_string: String,
+) -> reqwest::Result<Response> {
     let https_client = Client::builder()
         .danger_accept_invalid_certs(true)
         .build()?;
-    https_client.post(destination).body(body).send().await
+    https_client
+        .post(destination)
+        .body(body)
+        .header(reqwest::header::ACCEPT_LANGUAGE, &language_string)
+        .send()
+        .await
     //let response = response.error_for_status()?;
     //response.text().await
 }
