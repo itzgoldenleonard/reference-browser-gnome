@@ -81,7 +81,7 @@ impl Window {
                         .append(&(create_text_block(&self.imp().text_block_tag_table, content))),
                     Some(text_block) => append_text_to_block(&text_block, content),
                 },
-                LinkLine(link) => self.imp().canvas.append(&create_link_line(link, base_url)),
+                LinkLine(link) => self.imp().canvas.append(&create_link_line(&self, link, base_url)),
             }
         }
     }
@@ -122,7 +122,7 @@ impl Window {
                         .insert_at_cursor(format!("\n{}", content).as_str());
                 }
             },
-            LinkLine(link) => append!(create_link_line(link, base_url)),
+            LinkLine(link) => append!(create_link_line(&self, link, base_url)),
             PreformattedLine(_, content) => match self.current_code_block() {
                 None => append!(create_code_block(content)),
                 Some(code_block) => {
@@ -796,7 +796,7 @@ fn validate_url(url: &String, base_url: &Url) -> Result<String, url::ParseError>
     }
 }
 
-fn create_link_line(link: line_types::Link, base_url: &Url) -> Label {
+fn create_link_line(window: &Window, link: line_types::Link, base_url: &Url) -> Label {
     let label = link.label.unwrap_or(link.url.clone());
     let label = escape_pango_markup(label);
 
@@ -821,6 +821,12 @@ fn create_link_line(link: line_types::Link, base_url: &Url) -> Label {
     if url_is_invalid {
         widget.add_css_class("dim-label");
     }
+
+    widget.connect_activate_link(clone!(@weak window => @default-return glib::signal::Inhibit(true), move |_: &Label, uri: &str| {
+        window.set_uri(uri);
+        glib::signal::Inhibit(true)
+    }));
+
     widget
 }
 
