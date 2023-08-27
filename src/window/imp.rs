@@ -9,9 +9,10 @@ use gio::Settings;
 use glib::subclass::InitializingObject;
 use glib::{ParamSpec, Properties, Value};
 use gtk::{
-    gio, glib, CompositeTemplate, Entry, Label, ListBox, ScrolledWindow, SearchEntry, Stack,
-    TextBuffer, TextTagTable,
+    gio, glib, Button, CompositeTemplate, Entry, Label, ListBox, ScrolledWindow, SearchEntry,
+    Stack, TextBuffer, TextTagTable,
 };
+use reqwest::Identity;
 use std::cell::RefCell;
 use std::fs;
 use url::Url;
@@ -42,10 +43,13 @@ pub struct Window {
     pub server_error_buffer: TemplateChild<TextBuffer>,
     #[template_child]
     pub language_preference_entry: TemplateChild<Entry>,
+    #[template_child]
+    pub client_cert_button: TemplateChild<Button>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
     pub form_data: RefCell<Vec<Vec<Input>>>,
     pub settings: RefCell<Option<Settings>>,
+    pub client_cert: RefCell<Option<Identity>>,
 }
 
 // Boilerplate
@@ -221,6 +225,16 @@ impl Window {
             None => return eprintln!("A header entry without a url in its tooltip was clicked. This is a bug, please report it to: https://github.com/itzgoldenleonard/reference-browser-gnome/issues"),
         };
         self.obj().set_uri(entry_url);
+    }
+
+    #[template_callback]
+    fn client_cert_picker(&self, button: &gtk::Button) {
+        println!("Picking client certificate");
+    }
+
+    #[template_callback]
+    fn on_client_cert_clear(&self, button: &gtk::Button) {
+        println!("Clearing client certificate");
     }
 }
 

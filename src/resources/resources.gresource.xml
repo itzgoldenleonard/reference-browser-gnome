@@ -17,5 +17,7 @@
         <file preprocess="xml-stripblanks" alias="warning-symbolic.svg">icons/warning-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="junk-symbolic.svg">icons/junk-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="settings-symbolic.svg">icons/settings-symbolic.svg</file>
+        <file preprocess="xml-stripblanks" alias="fingerprint2-symbolic.svg">icons/fingerprint2-symbolic.svg</file>
+        <file preprocess="xml-stripblanks" alias="entry-clear-symbolic.svg">icons/entry-clear-symbolic.svg</file>
     </gresource>
 </gresources>
