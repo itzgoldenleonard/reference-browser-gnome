@@ -3,6 +3,7 @@ mod imp;
 use crate::athn_document::form;
 use glib::Object;
 use gtk::glib;
+use adw::subclass::prelude::*;
 
 glib::wrapper! {
     pub struct SubmitFormField(ObjectSubclass<imp::SubmitFormField>)
@@ -19,6 +20,7 @@ impl SubmitFormField {
         destination: Option<String>,
         redirect: bool,
         language_string: String,
+        identity: Option<reqwest::Identity>,
     ) -> Self {
         let label = match label {
             None => id.id(),
@@ -26,13 +28,17 @@ impl SubmitFormField {
         };
         let invalid_url = destination.is_none();
 
-        Object::builder()
+        let obj: Self = Object::builder()
             .property("form-idx", form_idx as u64)
             .property("label", label)
             .property("destination", destination.unwrap_or_default())
             .property("redirect", redirect)
             .property("invalid-url", invalid_url)
             .property("language-string", language_string)
-            .build()
+            .build();
+
+        *obj.imp().identity.borrow_mut() = identity;
+
+        obj
     }
 }

@@ -4,7 +4,7 @@ use glib::subclass::Signal;
 use glib::{clone, ParamSpec, Properties, Value};
 use gtk::glib;
 use once_cell::sync::Lazy;
-use reqwest::{Client, Response, StatusCode};
+use reqwest::{Client, Response, StatusCode, Identity};
 use std::cell::{Cell, RefCell};
 
 #[derive(Default, Properties)]
@@ -24,6 +24,7 @@ pub struct SubmitFormField {
     pub invalid_url: Cell<bool>,
     #[property(get, set)]
     pub invalid_form: Cell<bool>,
+    pub identity: RefCell<Option<Identity>>,
 }
 
 #[glib::object_subclass]
@@ -115,7 +116,8 @@ impl ButtonImpl for SubmitFormField {
         let ctx = glib::MainContext::default();
         ctx.spawn_local(clone!(@weak self as button => async move {
             let language_string = button.obj().language_string();
-            let response = match post(button.obj().destination(), button.obj().serialized_data(), language_string) {
+            let identity = button.identity.borrow().clone();
+            let response = match post(button.obj().destination(), button.obj().serialized_data(), language_string, identity) {
                 Ok(val) if val.status().is_success() => val.text().await.unwrap_or_default(),
                 Ok(e) if e.status() == StatusCode::IM_A_TEAPOT => {
                     return button
@@ -146,10 +148,14 @@ async fn post(
     destination: String,
     body: String,
     language_string: String,
+    identity: Option<Identity>,
 ) -> reqwest::Result<Response> {
     let https_client = Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()?;
+        .danger_accept_invalid_certs(true);
+    let https_client = match identity.clone() {
+        None => https_client.build()?,
+        Some(identity) => https_client.identity(identity).build()?,
+    };
     https_client
         .post(destination)
         .body(body)

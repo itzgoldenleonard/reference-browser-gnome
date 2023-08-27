@@ -3,11 +3,11 @@ use crate::athn_document::{Document, ParserState};
 use crate::window::input::Input;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use adw::Leaflet;
+use adw::{Leaflet, ButtonContent};
 use core::fmt::Debug;
-use gio::Settings;
+use gio::{Settings, File};
 use glib::subclass::InitializingObject;
-use glib::{ParamSpec, Properties, Value};
+use glib::{ParamSpec, Properties, Value, clone};
 use gtk::{
     gio, glib, Button, CompositeTemplate, Entry, Label, ListBox, ScrolledWindow, SearchEntry,
     Stack, TextBuffer, TextTagTable,
@@ -44,7 +44,7 @@ pub struct Window {
     #[template_child]
     pub language_preference_entry: TemplateChild<Entry>,
     #[template_child]
-    pub client_cert_button: TemplateChild<Button>,
+    pub client_cert_label: TemplateChild<ButtonContent>,
     #[property(get, set = Self::go_to_url)]
     pub uri: RefCell<String>,
     pub form_data: RefCell<Vec<Vec<Input>>>,
@@ -79,9 +79,9 @@ fn validate_url(url: &str) -> Result<Url, url::ParseError> {
     }
 }
 
-fn get_document(url: &Url, language_string: &str) -> Result<String, String> {
+fn get_document(url: &Url, language_string: &str, identity: &Option<Identity>) -> Result<String, String> {
     match url.scheme() {
-        "https" => get_document_by_https(url, language_string).map_err(|e| e.to_string()),
+        "https" => get_document_by_https(url, language_string, identity).map_err(|e| e.to_string()),
         "file" => get_document_by_file(url).map_err(|e| e.to_string()),
         _ => Err("Unsupported protocol".to_string()),
     }
@@ -92,10 +92,13 @@ fn get_document_by_file(url: &Url) -> Result<String, std::io::Error> {
     fs::read_to_string(url.path())
 }
 
-fn get_document_by_https(url: &Url, language_string: &str) -> reqwest::Result<String> {
+fn get_document_by_https(url: &Url, language_string: &str, identity: &Option<Identity>) -> reqwest::Result<String> {
     let https_client = reqwest::blocking::Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()?;
+        .danger_accept_invalid_certs(true);
+    let https_client = match identity.clone() {
+        None => https_client.build()?,
+        Some(identity) => https_client.identity(identity).build()?,
+    };
 
     let response = https_client
         .get(url.clone())
@@ -129,8 +132,9 @@ impl Window {
             .clone()
             .map(|settings| settings.string("language-preference"))
             .unwrap_or_default();
+        let identity = self.client_cert.borrow();
 
-        let response = get_document(&url, &language_string);
+        let response = get_document(&url, &language_string, &*identity);
         let response = match response {
             Err(e) => return self.set_request_error(&e),
             Ok(val) => val,
@@ -193,24 +197,24 @@ impl Window {
     }
 
     #[template_callback]
-    fn on_parse_error_button_clicked(&self, _button: &gtk::Button) {
+    fn on_parse_error_button_clicked(&self, _button: &Button) {
         let uri = self.obj().uri();
         let launcher = gtk::UriLauncher::new(&uri);
         launcher.launch(None::<&gtk::Window>, None::<&gtk::gio::Cancellable>, |_| ());
     }
 
     #[template_callback]
-    fn on_hide_header_button_clicked(&self, _button: &gtk::Button) {
+    fn on_hide_header_button_clicked(&self, _button: &Button) {
         self.leaflet.navigate(adw::NavigationDirection::Forward);
     }
 
     #[template_callback]
-    fn on_show_header_button_clicked(&self, _button: &gtk::Button) {
+    fn on_show_header_button_clicked(&self, _button: &Button) {
         self.leaflet.navigate(adw::NavigationDirection::Back);
     }
 
     #[template_callback]
-    fn on_show_settings_pressed(&self, _button: &gtk::Button) {
+    fn on_show_settings_pressed(&self, _button: &Button) {
         self.stack.set_visible_child_name("settings");
     }
 
@@ -228,14 +232,61 @@ impl Window {
     }
 
     #[template_callback]
-    fn client_cert_picker(&self, button: &gtk::Button) {
-        println!("Picking client certificate");
+    fn client_cert_picker(&self, _: &Button) {
+        let ctx = glib::MainContext::default();
+        ctx.spawn_local(clone!(@weak self as window => async move {
+            let filters = gio::ListStore::new(gtk::FileFilter::static_type());
+            let filter = gtk::FileFilter::new();
+            gtk::FileFilter::set_name(&filter, Some("PEM Client certificate"));
+            filter.add_mime_type("application/x-x509-ca-cert");
+            filter.add_suffix("pem");
+            filter.add_suffix("key");
+            filter.add_suffix("cert");
+            filters.append(&filter);
+
+            let dialog = gtk::FileDialog::builder()
+                .accept_label("_Pick certificate")
+                .filters(&filters)
+                .modal(true)
+                .title("Pick client certificate")
+                .build();
+
+            if let Ok(file) = dialog.open_future(None::<&gtk::Window>).await {
+                let file_path = format!("{:?}", file.path().unwrap_or_default());
+                match read_client_cert(file).await {
+                    Ok(identity) => {
+                        *window.client_cert.borrow_mut() = Some(identity);
+                        window.client_cert_label.set_use_underline(false);
+                        window.client_cert_label.set_label(&file_path);
+                    }
+                    Err(e) => {
+                        eprintln!("{e}");
+                        let toast = adw::Toast::new(format!("{e}").as_str());
+                        window.toaster.add_toast(toast);
+                        if let Some(toast_widget) = window.toaster.last_child() {
+                            toast_widget.add_css_class("error");
+                        }
+                    }
+                }
+            }
+        }));
     }
 
     #[template_callback]
-    fn on_client_cert_clear(&self, button: &gtk::Button) {
-        println!("Clearing client certificate");
+    fn on_client_cert_clear(&self, _: &Button) {
+        *self.client_cert.borrow_mut() = None;
+        self.client_cert_label.set_use_underline(true);
+        self.client_cert_label.set_label("Ch_oose certificate");
     }
+}
+
+async fn read_client_cert(file: File) -> Result<Identity, Box<dyn std::error::Error>> {
+    let reader = file.read_future(glib::PRIORITY_DEFAULT).await?;
+    let bytes = reader
+        .read_bytes_future(std::i32::MAX as usize, glib::PRIORITY_DEFAULT)
+        .await?;
+    let cert = Identity::from_pem(&bytes)?;
+    Ok(cert)
 }
 
 // More boilerplate

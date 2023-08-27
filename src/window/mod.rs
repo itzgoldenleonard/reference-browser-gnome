@@ -606,6 +606,7 @@ fn create_submit_form_field(
         .clone()
         .map(|settings| settings.string("language-preference"))
         .unwrap_or_default();
+    let identity = window.imp().client_cert.borrow().clone();
 
     let widget = SubmitFormField::new(
         form_idx,
@@ -614,6 +615,7 @@ fn create_submit_form_field(
         url,
         field.redirect,
         language_string.to_string(),
+        identity,
     );
 
     widget.connect_closure(

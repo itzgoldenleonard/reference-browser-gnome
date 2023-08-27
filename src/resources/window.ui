@@ -110,32 +110,32 @@
 
                         <!-- Main area -->
                         <child>
-                            <object class="GtkStack" id="stack">
-                                <property name="transition-type">crossfade</property>
-                                <property name="transition-duration">100</property>
-                                <!-- No search yet -->
+                            <object class="AdwToastOverlay" id="toaster">
                                 <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">start</property>
-                                        <property name="child">
-                                            <object class="AdwStatusPage">
-                                                <property name="icon-name">checkbox-checked-symbolic</property>
-                                                <property name="title">Use the search bar to load a page</property>
+                                    <object class="GtkStack" id="stack">
+                                        <property name="transition-type">crossfade</property>
+                                        <property name="transition-duration">100</property>
+                                        <!-- No search yet -->
+                                        <child>
+                                            <object class="GtkStackPage">
+                                                <property name="name">start</property>
+                                                <property name="child">
+                                                    <object class="AdwStatusPage">
+                                                        <property name="icon-name">checkbox-checked-symbolic</property>
+                                                        <property name="title">Use the search bar to load a page</property>
+                                                    </object>
+                                                </property>
                                             </object>
-                                        </property>
-                                    </object>
-                                </child>
+                                        </child>
 
-                                <!-- Canvas -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">canvas</property>
-                                        <property name="child">
-                                            <object class="GtkBox">
-                                                <property name="orientation">vertical</property>
-                                                <property name="spacing">8</property>
-                                                <child>
-                                                    <object class="AdwToastOverlay" id="toaster">
+                                        <!-- Canvas -->
+                                        <child>
+                                            <object class="GtkStackPage">
+                                                <property name="name">canvas</property>
+                                                <property name="child">
+                                                    <object class="GtkBox">
+                                                        <property name="orientation">vertical</property>
+                                                        <property name="spacing">8</property>
                                                         <child>
                                                             <object class="GtkScrolledWindow">
                                                                 <property name="hscrollbar-policy">never</property>
@@ -148,144 +148,144 @@
                                                                 </child>
                                                             </object>
                                                         </child>
-                                                    </object>
-                                                </child>
-                                                <child>
-                                                    <object class="GtkScrolledWindow" id="server_error_window">
-                                                        <property name="hscrollbar-policy">never</property>
-                                                        <property name="height-request">150</property>
-                                                        <property name="visible">false</property>
                                                         <child>
-                                                            <object class="GtkTextView">
-                                                                <property name="editable">false</property>
-                                                                <property name="cursor-visible">false</property>
-                                                                <property name="buffer">
-                                                                    <object class="GtkTextBuffer" id="server_error_buffer" />
-                                                                </property>
-                                                            </object>
-                                                        </child>
-                                                    </object>
-                                                </child>
-                                            </object>
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Request error -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">request-error</property>
-                                        <property name="child">
-                                            <object class="AdwStatusPage">
-                                                <property name="icon-name">error-symbolic</property>
-                                                <property name="title">There was an error with the request</property>
-                                                <property name="description">The following error message was given</property>
-                                                <property name="child">
-                                                    <object class="GtkLabel" id="request_error">
-                                                        <property name="wrap">True</property>
-                                                        <style>
-                                                            <class name="monospace" />
-                                                        </style>
-                                                    </object>
-                                                </property>
-                                            </object>
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Parse error -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">parse-error</property>
-                                        <property name="child">
-                                            <object class="AdwStatusPage">
-                                                <property name="icon-name">error-symbolic</property>
-                                                <property name="title">This is not a valid ATHN document</property>
-                                                <property name="description">The full error message has been printed to stderr</property>
-                                                <property name="child">
-                                                    <object class="GtkButton">
-                                                        <signal name="clicked" handler="on_parse_error_button_clicked" swapped="true"/>
-                                                        <property name="label">Open in external application</property>
-                                                        <style>
-                                                            <class name="suggested-action"/>
-                                                        </style>
-                                                    </object>
-                                                </property>
-                                            </object>
-                                        </property>
-                                    </object>
-                                </child>
-
-                                <!-- Settings -->
-                                <child>
-                                    <object class="GtkStackPage">
-                                        <property name="name">settings</property>
-                                        <property name="child">
-                                            <object class="GtkBox">
-                                                <property name="margin-start">12</property>
-                                                <property name="margin-end">12</property>
-                                                <property name="orientation">vertical</property>
-                                                <child>
-                                                    <object class="GtkLabel">
-                                                        <property name="label">Language preference list</property>
-                                                        <property name="halign">GTK_ALIGN_START</property>
-                                                        <attributes>
-                                                            <attribute name="weight" value="PANGO_WEIGHT_BOLD"/>
-                                                        </attributes>
-                                                        <property name="margin-top">12</property>
-                                                        <property name="margin-bottom">4</property>
-                                                    </object>
-                                                </child>
-                                                <child>
-                                                    <object class="GtkEntry" id="language_preference_entry"/>
-                                                </child>
-                                                <child>
-                                                    <object class="GtkLabel">
-                                                        <property name="label">Client certificate</property>
-                                                        <property name="halign">GTK_ALIGN_START</property>
-                                                        <attributes>
-                                                            <attribute name="weight" value="PANGO_WEIGHT_BOLD"/>
-                                                        </attributes>
-                                                        <property name="margin-top">12</property>
-                                                        <property name="margin-bottom">4</property>
-                                                    </object>
-                                                </child>
-                                                <child>
-                                                    <object class="GtkBox">
-                                                        <property name="spacing">4</property>
-                                                        <child>
-                                                            <object class="GtkButton" id="client_cert_button">
-                                                                <signal name="clicked" handler="client_cert_picker" swapped="true"/>
-                                                                <property name="hexpand">true</property>
-                                                                <property name="child">
-                                                                    <object class="AdwButtonContent">
-                                                                        <property name="halign">GTK_ALIGN_START</property>
-                                                                        <property name="icon-name">fingerprint2-symbolic</property>
-                                                                        <property name="label" translatable="yes">Ch_oose certificate</property>
-                                                                        <property name="use-underline">True</property>
+                                                            <object class="GtkScrolledWindow" id="server_error_window">
+                                                                <property name="hscrollbar-policy">never</property>
+                                                                <property name="height-request">150</property>
+                                                                <property name="visible">false</property>
+                                                                <child>
+                                                                    <object class="GtkTextView">
+                                                                        <property name="editable">false</property>
+                                                                        <property name="cursor-visible">false</property>
+                                                                        <property name="buffer">
+                                                                            <object class="GtkTextBuffer" id="server_error_buffer" />
+                                                                        </property>
                                                                     </object>
-                                                                </property>
+                                                                </child>
                                                             </object>
                                                         </child>
-                                                        <child>
+                                                    </object>
+                                                </property>
+                                            </object>
+                                        </child>
+
+                                        <!-- Request error -->
+                                        <child>
+                                            <object class="GtkStackPage">
+                                                <property name="name">request-error</property>
+                                                <property name="child">
+                                                    <object class="AdwStatusPage">
+                                                        <property name="icon-name">error-symbolic</property>
+                                                        <property name="title">There was an error with the request</property>
+                                                        <property name="description">The following error message was given</property>
+                                                        <property name="child">
+                                                            <object class="GtkLabel" id="request_error">
+                                                                <property name="wrap">True</property>
+                                                                <style>
+                                                                    <class name="monospace" />
+                                                                </style>
+                                                            </object>
+                                                        </property>
+                                                    </object>
+                                                </property>
+                                            </object>
+                                        </child>
+
+                                        <!-- Parse error -->
+                                        <child>
+                                            <object class="GtkStackPage">
+                                                <property name="name">parse-error</property>
+                                                <property name="child">
+                                                    <object class="AdwStatusPage">
+                                                        <property name="icon-name">error-symbolic</property>
+                                                        <property name="title">This is not a valid ATHN document</property>
+                                                        <property name="description">The full error message has been printed to stderr</property>
+                                                        <property name="child">
                                                             <object class="GtkButton">
-                                                                <signal name="clicked" handler="on_client_cert_clear" swapped="true"/>
-                                                                <property name="child">
-                                                                    <object class="AdwButtonContent">
-                                                                        <property name="icon-name">entry-clear-symbolic</property>
-                                                                        <property name="label" translatable="yes">_Clear</property>
-                                                                        <property name="use-underline">True</property>
+                                                                <signal name="clicked" handler="on_parse_error_button_clicked" swapped="true"/>
+                                                                <property name="label">Open in external application</property>
+                                                                <style>
+                                                                    <class name="suggested-action"/>
+                                                                </style>
+                                                            </object>
+                                                        </property>
+                                                    </object>
+                                                </property>
+                                            </object>
+                                        </child>
+
+                                        <!-- Settings -->
+                                        <child>
+                                            <object class="GtkStackPage">
+                                                <property name="name">settings</property>
+                                                <property name="child">
+                                                    <object class="GtkBox">
+                                                        <property name="margin-start">12</property>
+                                                        <property name="margin-end">12</property>
+                                                        <property name="orientation">vertical</property>
+                                                        <child>
+                                                            <object class="GtkLabel">
+                                                                <property name="label">Language preference list</property>
+                                                                <property name="halign">GTK_ALIGN_START</property>
+                                                                <attributes>
+                                                                    <attribute name="weight" value="PANGO_WEIGHT_BOLD"/>
+                                                                </attributes>
+                                                                <property name="margin-top">12</property>
+                                                                <property name="margin-bottom">4</property>
+                                                            </object>
+                                                        </child>
+                                                        <child>
+                                                            <object class="GtkEntry" id="language_preference_entry"/>
+                                                        </child>
+                                                        <child>
+                                                            <object class="GtkLabel">
+                                                                <property name="label">Client certificate (fullchain PEM format)</property>
+                                                                <property name="halign">GTK_ALIGN_START</property>
+                                                                <attributes>
+                                                                    <attribute name="weight" value="PANGO_WEIGHT_BOLD"/>
+                                                                </attributes>
+                                                                <property name="margin-top">12</property>
+                                                                <property name="margin-bottom">4</property>
+                                                            </object>
+                                                        </child>
+                                                        <child>
+                                                            <object class="GtkBox">
+                                                                <property name="spacing">4</property>
+                                                                <child>
+                                                                    <object class="GtkButton" >
+                                                                        <signal name="clicked" handler="client_cert_picker" swapped="true"/>
+                                                                        <property name="hexpand">true</property>
+                                                                        <property name="child">
+                                                                            <object class="AdwButtonContent" id="client_cert_label">
+                                                                                <property name="halign">GTK_ALIGN_START</property>
+                                                                                <property name="icon-name">fingerprint2-symbolic</property>
+                                                                                <property name="label" translatable="yes">Ch_oose certificate</property>
+                                                                                <property name="use-underline">True</property>
+                                                                            </object>
+                                                                        </property>
                                                                     </object>
-                                                                </property>
+                                                                </child>
+                                                                <child>
+                                                                    <object class="GtkButton">
+                                                                        <signal name="clicked" handler="on_client_cert_clear" swapped="true"/>
+                                                                        <property name="child">
+                                                                            <object class="AdwButtonContent">
+                                                                                <property name="icon-name">entry-clear-symbolic</property>
+                                                                                <property name="label" translatable="yes">_Clear</property>
+                                                                                <property name="use-underline">True</property>
+                                                                            </object>
+                                                                        </property>
+                                                                    </object>
+                                                                </child>
                                                             </object>
                                                         </child>
                                                     </object>
-                                                </child>
+                                                </property>
                                             </object>
-                                        </property>
+                                        </child>
+
                                     </object>
                                 </child>
-
                             </object>
                         </child>
                     </object>

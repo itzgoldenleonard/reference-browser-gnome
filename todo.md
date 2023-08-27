@@ -1,5 +1,4 @@
 # Before first draft release
-- [ ] Make requests (both read and form response) with a client certificate (but it has to be manually generated with openssl)
 - [ ] Submit to flathub
 
 # Bugs
