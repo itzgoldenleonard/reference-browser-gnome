@@ -14,7 +14,7 @@ use adw::Application;
 use gtk::gio;
 use window::Window;
 
-const APP_ID: &str = "org.athn.browser.gnome";
+const APP_ID: &str = "online.athn.browser.gnome";
 
 fn main() {
     // Register and include ui

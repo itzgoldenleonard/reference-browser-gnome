@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 
 #[derive(Default, CompositeTemplate, Properties)]
-#[template(resource = "/org/athn/browser/gnome/enum_form_field.ui")]
+#[template(resource = "/online/athn/browser/gnome/enum_form_field.ui")]
 #[properties(wrapper_type = super::EnumFormField)]
 pub struct EnumFormField {
     #[template_child]

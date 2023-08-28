@@ -8,7 +8,7 @@ use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 
 #[derive(Default, CompositeTemplate, Properties)]
-#[template(resource = "/org/athn/browser/gnome/int_form_field.ui")]
+#[template(resource = "/online/athn/browser/gnome/int_form_field.ui")]
 #[properties(wrapper_type = super::IntFormField)]
 pub struct IntFormField {
     #[template_child]

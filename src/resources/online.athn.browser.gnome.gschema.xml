@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <schemalist>
-    <schema id="org.athn.browser.gnome" path="/org/athn/browser/gnome/">
+    <schema id="online.athn.browser.gnome" path="/online/athn/browser/gnome/">
         <key name="language-preference" type="s">
             <default>"en_US"</default>
         </key>

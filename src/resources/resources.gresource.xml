@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-    <gresource prefix="/org/athn/browser/gnome/">
+    <gresource prefix="/online/athn/browser/gnome/">
         <file compressed="true" preprocess="xml-stripblanks">window.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">date_form_field.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">email_form_field.ui</file>
@@ -10,7 +10,7 @@
         <file compressed="true" preprocess="xml-stripblanks">string_form_field.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">enum_form_field.ui</file>
     </gresource>
-    <gresource prefix="/org/athn/browser/gnome/icons/scalable/actions/">
+    <gresource prefix="/online/athn/browser/gnome/icons/scalable/actions/">
         <file preprocess="xml-stripblanks" alias="address-book-symbolic.svg">icons/address-book-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="file-manager-symbolic.svg">icons/file-manager-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="question-symbolic.svg">icons/question-symbolic.svg</file>

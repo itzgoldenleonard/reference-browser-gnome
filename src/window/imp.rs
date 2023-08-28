@@ -18,7 +18,7 @@ use std::fs;
 use url::Url;
 
 #[derive(Properties, CompositeTemplate, Default)]
-#[template(resource = "/org/athn/browser/gnome/window.ui")]
+#[template(resource = "/online/athn/browser/gnome/window.ui")]
 #[properties(wrapper_type = super::Window)]
 pub struct Window {
     #[template_child]
@@ -305,7 +305,7 @@ impl ObjectImpl for Window {
 
     fn constructed(&self) {
         self.parent_constructed();
-        let settings = Settings::new("org.athn.browser.gnome");
+        let settings = Settings::new("online.athn.browser.gnome");
         settings
             .bind(
                 "language-preference",
