@@ -31,13 +31,14 @@ sudo apt install libadwaita-1-dev libgtk-4-dev build-essential
 sudo pacman install -S libadwaita gtk4 base-devel
 ```
 
-**MacOS**
+**For MacOS**
 
 ```sh
 brew install gtk4 libadwaita
 ```
 
-**Windows**
+**For Windows**
+
 Refer to the gtk4-rs book <https://gtk-rs.org/gtk4-rs/stable/latest/book/installation_windows.html> for gtk4 installation and <https://gtk-rs.org/gtk4-rs/stable/latest/book/libadwaita.html#windows> for libadwaita installation
 
 ## 2. Install glib settings schema
