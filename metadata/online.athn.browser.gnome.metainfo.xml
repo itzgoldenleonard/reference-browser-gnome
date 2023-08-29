@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>online.athn.browser.gnome</id>
+  
+  <name>ATHN browser Gnome</name>
+  <summary>ATHN browser for gnome</summary>
+  
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>CC0-1.0</project_license>
+  
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  
+  <description>
+    <p>
+      gtk4-rs and libadwaita-rs based browser for the gnome ecosystem. Compatible with ATHN markup language v0.1.5 (alpha) and ATHN over https v0.1.1 (alpha), read more about project ATHN at https://athn.online/. You can even visit the ATHN site in this browser at https://athn.online/index.athn, try it out.
+    </p>
+  </description>
+  
+  <launchable type="desktop-id">online.athn.browser.gnome.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/itzgoldenleonard/reference-browser-gnome/master/metadata/Screenshot1.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/itzgoldenleonard/reference-browser-gnome/master/metadata/Screenshot2.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/itzgoldenleonard/reference-browser-gnome/master/metadata/Screenshot3.png</image>
+    </screenshot>
+  </screenshots>
+</component>

@@ -1,0 +1,23 @@
+app-id: online.athn.browser.gnome
+runtime: org.gnome.Platform
+runtime-version: '44'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: reference-browser-gnome
+finish-args: 
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --share=network
+modules:
+  - name: 'reference-browser-gnome'
+    buildsystem: simple
+    build-commands: 
+      - cargo build --release
+      - install -D target/release/reference-browser-gnome /app/bin/reference-browser-gnome
+    sources: 
+      - type: git
+        url: https://github.com/itzgoldenleonard/reference-browser-gnome.git
+

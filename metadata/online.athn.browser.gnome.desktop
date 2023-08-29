@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+
+Name=ATHN browser Gnome
+Comment=ATHN browser for gnome
+Categories=Network;GNOME;
+
+Icon=online.athn.browser.gnome
+Exec=reference-browser-gnome %U
+Terminal=false
+MimeType=text/plain;text/athn;x-scheme-handler/https
