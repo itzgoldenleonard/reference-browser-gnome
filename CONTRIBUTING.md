@@ -74,3 +74,12 @@ git clone https://github.com/itzgoldenleonard/reference-browser-gnome
 cd reference-browser-gnome
 cargo run # Test that everything works
 ```
+
+## 4. Build for flathub
+
+If you have updated `Cargo.lock` you need to update `metadata/cargo-sources.json` to reflect your changes
+
+```sh
+nix-shell -p python3 python310Packages.aiohttp python310Packages.toml # install dependencies
+python /path/to/flatpak-builder-tools/flatpak-cargo-generator.py Cargo.lock -o metadata/cargo-sources.json
+```
