@@ -1,6 +1,6 @@
 [package]
 name = "reference-browser-gnome"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "CC0-1.0"
 rust-version = "1.71.1"
