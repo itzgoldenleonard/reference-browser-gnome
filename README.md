@@ -20,6 +20,8 @@ This app is currently not packaged for linux in any other ways but a binary can 
 
 Pre-built binaries for windows can be found in [releases](https://github.com/itzgoldenleonard/reference-browser-gnome/releases)
 
+Make sure to also download the gschemas.compiled file and place it in C:/ProgramData/glib-2.0/schemas
+
 If someone wants to package this app for chocolatey or another real windows package manager that would be great
 
 ## With crates.io (MacOS and others)

@@ -8,7 +8,7 @@ use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 
 #[derive(Default, CompositeTemplate, Properties)]
-#[template(resource = "/org/athn/browser/gnome/string_form_field.ui")]
+#[template(resource = "/online/athn/browser/gnome/string_form_field.ui")]
 #[properties(wrapper_type = super::StringFormField)]
 pub struct StringFormField {
     #[template_child]

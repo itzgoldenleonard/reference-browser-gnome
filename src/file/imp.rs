@@ -100,7 +100,7 @@ impl ButtonImpl for FileFormField {
                         return button.obj().emit_by_name::<()>("too-big-file-selected", &[]);
                     }
                 };
-                button.obj().emit_by_name::<()>("updated", &[&button.obj().id(), &file, &true]);
+                button.obj().emit_by_name::<()>("updated", &[&button.obj().form_idx(), &button.obj().id(), &file, &true]);
                 button.obj().set_valid(true);
             }
         }));
