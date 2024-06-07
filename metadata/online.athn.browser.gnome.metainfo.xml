@@ -19,11 +19,8 @@
   </supports>
   
   <description>
-    <p>
-      ATHN browser for the gnome ecosystem. Read more about project ATHN at athn.online. You can even visit the ATHN site in this browser at athn.online/index.athn, try it out.
-        <br/>
-        Compatible with ATHN markup language v0.1.5 (alpha) and ATHN over https v0.1.1 (alpha). This browser serves as a reference for a correct implementation of those standards, written in rust.
-    </p>
+    <p> ATHN browser for the gnome ecosystem. Read more about project ATHN at athn.online. You can even visit the ATHN site in this browser at athn.online/index.athn, try it out. </p>
+    <p> Compatible with ATHN markup language v0.1.5 (alpha) and ATHN over https v0.1.1 (alpha). This browser serves as a reference for a correct implementation of those standards, written in rust. </p>
   </description>
   
   <launchable type="desktop-id">online.athn.browser.gnome.desktop</launchable>
