@@ -1,8 +1,5 @@
-# Before first draft release
-- [ ] Submit to flathub
-
 # Bugs
-- [ ] Files with spaces in their names dont open (no such file or directory found) (I think it's because I am using the wrong method to get the file path from the file:// uri in the get_document_by_file function)
+- [ ] Files with spaces in their names dont open (no such file or directory found). I think it's because I am using the wrong method to get the file path from the file:// uri in the get_document_by_file function. Just use percent encoding for spaces for now
 - [ ] A line beginning with xx??? still gets registered as a form field
 
 # After first draft release

@@ -2,8 +2,8 @@
 Version=1.0
 Type=Application
 
-Name=ATHN browser Gnome
-Comment=ATHN browser for gnome
+Name=ATHN reference browser
+Comment=ATHN browser
 Categories=Network;GNOME;
 
 Icon=online.athn.browser.gnome

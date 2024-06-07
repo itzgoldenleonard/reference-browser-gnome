@@ -2,8 +2,9 @@
 <component type="desktop-application">
   <id>online.athn.browser.gnome</id>
   
-  <name>ATHN browser Gnome</name>
-  <summary>ATHN browser for gnome</summary>
+  <name>ATHN reference browser</name>
+  <summary>Browse ATHN sites</summary>
+  <developer_name>Ava</developer_name>
   
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>CC0-1.0</project_license>
@@ -19,7 +20,9 @@
   
   <description>
     <p>
-      gtk4-rs and libadwaita-rs based browser for the gnome ecosystem. Compatible with ATHN markup language v0.1.5 (alpha) and ATHN over https v0.1.1 (alpha), read more about project ATHN at athn.online. You can even visit the ATHN site in this browser at athn.online/index.athn, try it out.
+      ATHN browser for the gnome ecosystem. Read more about project ATHN at athn.online. You can even visit the ATHN site in this browser at athn.online/index.athn, try it out.
+        <br/>
+        Compatible with ATHN markup language v0.1.5 (alpha) and ATHN over https v0.1.1 (alpha). This browser serves as a reference for a correct implementation of those standards, written in rust.
     </p>
   </description>
   

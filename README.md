@@ -1,4 +1,4 @@
-# ATHN reference browser for Gnome
+# ATHN reference browser for the Gnome ecosystem
 [![We don't want this number over 10K](https://tokei.rs/b1/github/itzgoldenleonard/reference-browser-gnome?category=code)](https://github.com/itzgoldenleonard/reference-browser-gnome)
 
 gtk4-rs and libadwaita-rs based browser for the gnome ecosystem. Compatible with ATHN markup language v0.1.5 (alpha) and ATHN over https v0.1.1 (alpha), read more about project ATHN at <https://athn.online/>. You can even visit the ATHN site in this browser at <https://athn.online/index.athn>, try it out.
@@ -7,13 +7,13 @@ gtk4-rs and libadwaita-rs based browser for the gnome ecosystem. Compatible with
 
 ## Linux
 
-The primary installation method for linux is flatpak (not yet published, there will be a link here when it is). Install in you graphical package manager or with this command
+The primary installation method for linux is flatpak ([flathub link](https://flathub.org/apps/online.athn.browser.gnome)). Install in you graphical package manager or with this command
 
 ```sh
 flatpak install online.athn.browser.gnome
 ```
 
-This app is currently not packaged for linux in any other ways but a binary can be found in [releases](https://github.com/itzgoldenleonard/reference-browser-gnome/releases)
+This app is currently not packaged for any other linux distros, but a binary can be found in [releases](https://github.com/itzgoldenleonard/reference-browser-gnome/releases)
 
 
 ## Windows
